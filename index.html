@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clash Remake</title>
     <style>
-        body { margin: 0; background: black; overflow: hidden; font-family: sans-serif; }
+        body { margin: 0; background: black; overflow: hidden; font-family: 'Arial', sans-serif; }
 
-        /* Shop Button */
+        /* Main Shop Button */
         #shop-launcher {
             position: absolute;
             bottom: 20px;
@@ -17,72 +17,96 @@
             z-index: 100;
         }
 
-        /* Shop Overlay */
+        /* Full Screen Shop Overlay */
         #shop-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
             display: none;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 200;
         }
 
-        /* Carousel Container */
-        #carousel-container {
-            position: relative;
-            width: 80%;
-            max-width: 800px;
+        /* Image Track - Full Viewport */
+        #carousel-view {
+            width: 100%;
+            height: 80%;
             overflow: hidden;
-            border: 5px solid #5d3e21;
-            border-radius: 15px;
-            background: #222;
+            position: relative;
         }
 
         #track {
             display: flex;
-            transition: transform 0.5s ease-in-out;
+            height: 100%;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             cursor: grab;
-            user-select: none;
         }
 
-        #track:active { cursor: grabbing; }
-
         .shop-page {
-            min-width: 100%;
-            display: block;
+            min-width: 100vw;
+            height: 100%;
+            object-fit: contain; /* Keeps image full but not distorted */
+            user-select: none;
             pointer-events: none;
         }
 
         /* Navigation Arrows */
         .arrow {
             position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255,255,255,0.7);
-            border: none;
-            padding: 15px;
-            cursor: pointer;
-            font-size: 24px;
+            bottom: 10%; /* Lowered position */
+            background: #ffae00;
+            border: 4px solid #5d3e21;
+            color: white;
+            font-size: 30px;
             font-weight: bold;
-            border-radius: 50%;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 8px;
             z-index: 210;
+            box-shadow: 0 4px 0 #8a5a00;
         }
 
-        #prev-btn { left: 10px; }
-        #next-btn { right: 10px; }
+        .arrow:active { transform: translateY(2px); box-shadow: none; }
+        #prev-btn { left: 5%; }
+        #next-btn { right: 5%; }
 
-        /* Close functionality */
+        /* Custom Scrollbar at Bottom */
+        #scrollbar-container {
+            width: 60%;
+            height: 12px;
+            background: #333;
+            border-radius: 10px;
+            margin-top: 50px;
+            position: relative;
+            border: 2px solid #5d3e21;
+        }
+
+        #scroll-thumb {
+            position: absolute;
+            height: 100%;
+            width: 25%; /* 4 images, so thumb is 1/4 */
+            background: #ffae00;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: left 0.4s ease;
+        }
+
         #close-btn {
             position: absolute;
-            top: -40px;
-            right: 0;
+            top: 20px;
+            right: 20px;
             color: white;
+            font-size: 24px;
             cursor: pointer;
-            font-weight: bold;
+            background: #e74c3c;
+            padding: 5px 15px;
+            border-radius: 5px;
+            border: 3px solid #5d3e21;
         }
     </style>
 </head>
@@ -91,18 +115,22 @@
     <img id="shop-launcher" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop-button.png">
 
     <div id="shop-overlay">
-        <div id="carousel-container">
-            <div id="close-btn">CLOSE [X]</div>
-            
+        <div id="close-btn">X</div>
+        
+        <div id="carousel-view">
             <div id="track">
                 <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop1.png">
                 <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop2.png">
                 <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop3.png">
                 <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop4.png">
             </div>
+        </div>
 
-            <button class="arrow" id="prev-btn">&#10094;</button>
-            <button class="arrow" id="next-btn">&#10095;</button>
+        <button class="arrow" id="prev-btn"><</button>
+        <button class="arrow" id="next-btn">></button>
+
+        <div id="scrollbar-container">
+            <div id="scroll-thumb"></div>
         </div>
     </div>
 
@@ -110,6 +138,7 @@
         const launcher = document.getElementById('shop-launcher');
         const overlay = document.getElementById('shop-overlay');
         const track = document.getElementById('track');
+        const thumb = document.getElementById('scroll-thumb');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         const closeBtn = document.getElementById('close-btn');
@@ -117,27 +146,34 @@
         let currentIndex = 0;
         const totalImages = 4;
 
-        // Open/Close
         launcher.onclick = () => overlay.style.display = 'flex';
         closeBtn.onclick = () => overlay.style.display = 'none';
 
-        function updateSlide() {
-            track.style.transform = `translateX(-${currentIndex * 100}%)`;
+        function updateUI() {
+            track.style.transform = `translateX(-${currentIndex * 100}vw)`;
+            thumb.style.left = `${(currentIndex / totalImages) * 100}%`;
         }
 
-        // Arrow Nav
         nextBtn.onclick = () => {
             if (currentIndex < totalImages - 1) currentIndex++;
-            updateSlide();
+            updateUI();
         };
 
         prevBtn.onclick = () => {
             if (currentIndex > 0) currentIndex--;
-            updateSlide();
+            updateUI();
         };
 
-        // Drag/Swipe to scroll
-        let isDragging = false, startX, scrollLeft;
+        // Click on scrollbar to jump
+        document.getElementById('scrollbar-container').onclick = (e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            currentIndex = Math.floor((x / rect.width) * totalImages);
+            updateUI();
+        };
+
+        // Drag scrolling logic
+        let isDragging = false, startX;
 
         track.addEventListener('mousedown', (e) => {
             isDragging = true;
@@ -147,22 +183,18 @@
 
         window.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            const x = e.pageX;
-            const walk = (x - startX);
-            track.style.transform = `translateX(calc(-${currentIndex * 100}% + ${walk}px))`;
+            const walk = (e.pageX - startX);
+            track.style.transform = `translateX(calc(-${currentIndex * 100}vw + ${walk}px))`;
         });
 
         window.addEventListener('mouseup', (e) => {
             if (!isDragging) return;
             isDragging = false;
-            track.style.transition = 'transform 0.5s ease-in-out';
-            const endX = e.pageX;
-            const diff = startX - endX;
-
-            if (diff > 50 && currentIndex < totalImages - 1) currentIndex++;
-            else if (diff < -50 && currentIndex > 0) currentIndex--;
-            
-            updateSlide();
+            track.style.transition = 'transform 0.4s ease';
+            const diff = startX - e.pageX;
+            if (diff > 100 && currentIndex < totalImages - 1) currentIndex++;
+            else if (diff < -100 && currentIndex > 0) currentIndex--;
+            updateUI();
         });
     </script>
 </body>
