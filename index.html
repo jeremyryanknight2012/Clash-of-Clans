@@ -1,20 +1,169 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clash Remake</title>
     <style>
-        body { margin: 0; background: black; overflow: hidden; }
-        #shop-button {
+        body { margin: 0; background: black; overflow: hidden; font-family: sans-serif; }
+
+        /* Shop Button */
+        #shop-launcher {
             position: absolute;
             bottom: 20px;
             right: 20px;
             width: 100px;
             cursor: pointer;
+            z-index: 100;
+        }
+
+        /* Shop Overlay */
+        #shop-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        /* Carousel Container */
+        #carousel-container {
+            position: relative;
+            width: 80%;
+            max-width: 800px;
+            overflow: hidden;
+            border: 5px solid #5d3e21;
+            border-radius: 15px;
+            background: #222;
+        }
+
+        #track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+            cursor: grab;
+            user-select: none;
+        }
+
+        #track:active { cursor: grabbing; }
+
+        .shop-page {
+            min-width: 100%;
+            display: block;
+            pointer-events: none;
+        }
+
+        /* Navigation Arrows */
+        .arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.7);
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 50%;
+            z-index: 210;
+        }
+
+        #prev-btn { left: 10px; }
+        #next-btn { right: 10px; }
+
+        /* Close functionality */
+        #close-btn {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <img id="shop-button" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop-button.png">
+    <img id="shop-launcher" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop-button.png">
 
+    <div id="shop-overlay">
+        <div id="carousel-container">
+            <div id="close-btn">CLOSE [X]</div>
+            
+            <div id="track">
+                <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop1.png">
+                <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop2.png">
+                <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop3.png">
+                <img class="shop-page" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop4.png">
+            </div>
+
+            <button class="arrow" id="prev-btn">&#10094;</button>
+            <button class="arrow" id="next-btn">&#10095;</button>
+        </div>
+    </div>
+
+    <script>
+        const launcher = document.getElementById('shop-launcher');
+        const overlay = document.getElementById('shop-overlay');
+        const track = document.getElementById('track');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const closeBtn = document.getElementById('close-btn');
+
+        let currentIndex = 0;
+        const totalImages = 4;
+
+        // Open/Close
+        launcher.onclick = () => overlay.style.display = 'flex';
+        closeBtn.onclick = () => overlay.style.display = 'none';
+
+        function updateSlide() {
+            track.style.transform = `translateX(-${currentIndex * 100}%)`;
+        }
+
+        // Arrow Nav
+        nextBtn.onclick = () => {
+            if (currentIndex < totalImages - 1) currentIndex++;
+            updateSlide();
+        };
+
+        prevBtn.onclick = () => {
+            if (currentIndex > 0) currentIndex--;
+            updateSlide();
+        };
+
+        // Drag/Swipe to scroll
+        let isDragging = false, startX, scrollLeft;
+
+        track.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.pageX;
+            track.style.transition = 'none';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const x = e.pageX;
+            const walk = (x - startX);
+            track.style.transform = `translateX(calc(-${currentIndex * 100}% + ${walk}px))`;
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            track.style.transition = 'transform 0.5s ease-in-out';
+            const endX = e.pageX;
+            const diff = startX - endX;
+
+            if (diff > 50 && currentIndex < totalImages - 1) currentIndex++;
+            else if (diff < -50 && currentIndex > 0) currentIndex--;
+            
+            updateSlide();
+        });
+    </script>
 </body>
 </html>
