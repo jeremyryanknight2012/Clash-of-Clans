@@ -54,11 +54,15 @@
 
         /* --- BUILDINGS --- */
         .building {
-            position: absolute; bottom: 10%; left: 50%; width: 200%; height: 300%;
+            position: absolute; bottom: 10%; left: 50%; 
             background-size: contain; background-repeat: no-repeat; background-position: bottom center;
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
             transform-origin: bottom center; z-index: 10; pointer-events: none;
         }
+        /* Size Classes */
+        .size-1x1 { width: 100%; height: 150%; }
+        .size-2x2 { width: 200%; height: 300%; }
+        .size-3x3 { width: 300%; height: 450%; }
         .size-4x4 { width: 400%; height: 600%; }
 
         .collect-bubble {
@@ -71,16 +75,27 @@
         .collect-bubble img { width: 70%; }
         @keyframes bounce { 0%, 100% { top: -60px; } 50% { top: -75px; } }
 
-        /* --- UI --- */
+        /* --- SHOP UI --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .shop-btn { width: 120px; cursor: pointer; }
         #shop-layer {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center;
         }
-        .shop-container { width: 80vw; height: 60vh; background: #d3d7c6; border: 4px solid #1a1a1a; border-radius: 12px; position: relative; padding: 20px; }
-        
-        /* Save Notification */
+        .shop-container { 
+            width: 90vw; height: 80vh; background: #d3d7c6; border: 4px solid #1a1a1a; 
+            border-radius: 12px; position: relative; padding: 20px; overflow-y: auto;
+        }
+        .shop-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 20px; margin-top: 20px; justify-items: center;
+        }
+        .shop-item {
+            cursor: pointer; text-align: center; color: black; background: rgba(255,255,255,0.3);
+            padding: 10px; border-radius: 8px; border: 2px solid #000; width: 100px;
+        }
+        .shop-item:hover { background: rgba(255,255,255,0.6); }
+
         #save-status {
             position: fixed; bottom: 10px; left: 10px; color: rgba(255,255,255,0.5);
             font-size: 12px; z-index: 2000; pointer-events: none;
@@ -119,14 +134,29 @@
 
     <div id="shop-layer">
         <div class="shop-container">
-            <button id="close-shop">CLOSE</button>
+            <button id="close-shop" style="float:right;">X</button>
             <h2 style="text-align:center; color:black;">SHOP</h2>
-            <div style="display:flex; justify-content:center; gap:20px; margin-top:20px;">
-                <div class="shop-item" data-type="gold_mine" style="cursor:pointer; text-align:center; color:black;">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/gold_mine.png?raw=true" width="80"><br>Gold Mine
+            <div class="shop-grid">
+                <div class="shop-item" data-type="gold_mine">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/gold_mine.png?raw=true" width="60"><br>Gold Mine
                 </div>
-                <div class="shop-item" data-type="elixir_collector" style="cursor:pointer; text-align:center; color:black;">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/elixir_collector.png?raw=true" width="80"><br>Elixir Collector
+                <div class="shop-item" data-type="elixir_collector">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/elixir_collector.png?raw=true" width="60"><br>Elixir Coll.
+                </div>
+                <div class="shop-item" data-type="gold_storage">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/gold_storage.png?raw=true" width="60"><br>Gold Storage
+                </div>
+                <div class="shop-item" data-type="elixir_storage">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/elixir_storage.png?raw=true" width="60"><br>Elixir Storage
+                </div>
+                <div class="shop-item" data-type="barracks">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/barracks.png?raw=true" width="60"><br>Barracks
+                </div>
+                <div class="shop-item" data-type="cannon">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/cannon.png?raw=true" width="60"><br>Cannon
+                </div>
+                <div class="shop-item" data-type="builder_hut">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/builder_hut.png?raw=true" width="60"><br>Builder Hut
                 </div>
             </div>
         </div>
@@ -150,7 +180,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- GAME VARIABLES ---
         let resources = { gold: 750, elixir: 750, dark: 0, gems: 500 };
         let buildingsData = []; 
         let mapX = (window.innerWidth/2)-1200, mapY = (window.innerHeight/2)-800;
@@ -167,7 +196,7 @@
             initGrid();
             loadGame(); 
             setupEvents();
-            startAutosaveTimer();
+            setInterval(() => saveGame("Periodic Autosave"), 30000);
         };
 
         function initGrid() {
@@ -178,35 +207,40 @@
                 tile.className = 'tile';
                 tile.id = `tile-${i}`;
                 tile.style.backgroundImage = `url('${grassImgs[Math.floor(Math.random()*5)]}')`;
-                tile.onclick = () => handleTileClick(i);
+                tile.onclick = () => {
+                    if (isDragging) return;
+                    if (selectedBuilding) {
+                        spawnBuilding(i, selectedBuilding, true);
+                        selectedBuilding = null;
+                    }
+                };
                 grid.appendChild(tile);
             }
             updateMapPosition();
         }
 
-        function handleTileClick(id) {
-            if (isDragging) return;
-            if (selectedBuilding) {
-                spawnBuilding(id, selectedBuilding, false, true);
-                selectedBuilding = null;
-            }
-        }
-
-        function spawnBuilding(tileId, type, isTH = false, shouldSave = false) {
+        function spawnBuilding(tileId, type, shouldSave = false) {
             const tile = document.getElementById(`tile-${tileId}`);
             if (!tile || tile.querySelector('.building')) return;
 
+            // Determine Size
+            let sizeClass = 'size-2x2'; // Default
+            if (type === 'townhall1') sizeClass = 'size-4x4';
+            if (type.includes('storage')) sizeClass = 'size-3x3';
+            if (type === 'builder_hut') sizeClass = 'size-1x1';
+            if (type === 'cannon') sizeClass = 'size-2x2';
+
             const b = document.createElement('div');
-            b.className = 'building' + (isTH ? ' size-4x4' : '');
+            b.className = `building ${sizeClass}`;
             b.style.backgroundImage = `url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${type}.png?raw=true')`;
             tile.appendChild(b);
 
-            if (type.includes('gold') || type.includes('elixir')) {
+            if (type === 'gold_mine' || type === 'elixir_collector') {
                 setupCollector(tile, type);
             }
 
             if (shouldSave) {
-                buildingsData.push({ tileId, type, isTH });
+                buildingsData.push({ tileId, type });
                 saveGame("Building Placed");
             }
         }
@@ -223,7 +257,7 @@
                         e.stopPropagation();
                         resources[resType] += 50;
                         updateUI();
-                        saveGame("Resources Collected");
+                        saveGame("Collected Resources");
                         bubble.remove();
                     };
                     tile.appendChild(bubble);
@@ -231,48 +265,26 @@
             }, 15000);
         }
 
-        // --- FIREBASE DATA & AUTOSAVE ---
-        function saveGame(reason = "Autosave") {
-            set(ref(db, 'users/player1'), {
-                resources: resources,
-                buildings: buildingsData,
-                lastSave: new Date().getTime()
-            }).then(() => {
-                const status = document.getElementById('save-status');
-                status.innerText = `LAST SYNC: ${reason.toUpperCase()}`;
-                status.style.color = "#4CAF50";
-                setTimeout(() => status.style.color = "rgba(255,255,255,0.5)", 2000);
-            });
+        function saveGame(reason) {
+            set(ref(db, 'users/player1'), { resources, buildings: buildingsData });
+            document.getElementById('save-status').innerText = `SYNCED: ${reason.toUpperCase()}`;
         }
 
         function loadGame() {
-            onValue(ref(db, 'users/player1'), (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    resources = data.resources;
+            onValue(ref(db, 'users/player1'), (snap) => {
+                const d = snap.val();
+                if (d) {
+                    resources = d.resources;
                     updateUI();
-                    if (data.buildings) {
-                        // Clear existing buildings before loading
-                        document.querySelectorAll('.building').forEach(b => b.remove());
-                        buildingsData = [];
-                        data.buildings.forEach(b => spawnBuilding(b.tileId, b.type, b.isTH, true));
+                    if (d.buildings) {
+                        d.buildings.forEach(b => spawnBuilding(b.tileId, b.type, false));
+                        buildingsData = d.buildings;
                     }
                 } else {
-                    spawnBuilding(820, 'townhall1', true, true);
+                    spawnBuilding(820, 'townhall1', true);
                 }
             }, { onlyOnce: true });
         }
-
-        function startAutosaveTimer() {
-            setInterval(() => {
-                saveGame("Periodic Autosave");
-            }, 30000); // Saves every 30 seconds
-        }
-
-        // Save when user leaves the page
-        window.onbeforeunload = () => {
-            saveGame("Exit Save");
-        };
 
         function updateUI() {
             document.getElementById('gold-val').innerText = resources.gold;
@@ -281,38 +293,26 @@
             document.getElementById('dark-elixir-val').innerText = resources.dark;
         }
 
-        // --- CAMERA & UI EVENTS ---
         function setupEvents() {
-            const overlay = document.getElementById('intro-overlay');
-            overlay.onclick = () => {
+            document.getElementById('intro-overlay').onclick = function() {
                 document.getElementById('intro-audio').play();
-                setTimeout(() => {
-                    document.getElementById('intro-0').classList.remove('active');
-                    document.getElementById('intro-1').classList.add('active');
-                    setTimeout(() => {
-                        overlay.classList.add('hidden');
-                        bgMusic.src = playlist[0];
-                        bgMusic.play();
-                    }, 2500);
-                }, 2000);
+                this.classList.add('hidden');
+                bgMusic.src = playlist[0];
+                bgMusic.play();
             };
-
-            document.getElementById('shop-trigger').onclick = () => toggleShop(true);
-            document.getElementById('close-shop').onclick = () => toggleShop(false);
-            
+            document.getElementById('shop-trigger').onclick = () => document.getElementById('shop-layer').style.display = 'flex';
+            document.getElementById('close-shop').onclick = () => document.getElementById('shop-layer').style.display = 'none';
             document.querySelectorAll('.shop-item').forEach(item => {
                 item.onclick = () => {
                     selectedBuilding = item.dataset.type;
-                    toggleShop(false);
+                    document.getElementById('shop-layer').style.display = 'none';
                 };
             });
         }
 
-        function toggleShop(s) { document.getElementById('shop-layer').style.display = s ? 'flex' : 'none'; }
-        
         function updateMapPosition() {
-            const map = document.getElementById('map-container');
-            map.style.left = mapX + "px"; map.style.top = mapY + "px";
+            const m = document.getElementById('map-container');
+            m.style.left = mapX + "px"; m.style.top = mapY + "px";
         }
 
         window.onmousedown = (e) => {
