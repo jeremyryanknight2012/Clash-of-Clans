@@ -38,7 +38,8 @@
         #game-viewport { 
             width: 100vw; height: 100vh; 
             position: relative; overflow: hidden; 
-            perspective: 2000px; /* Crucial for that 3D depth */
+            perspective: 2000px;
+            cursor: default;
         }
         
         #world-surface {
@@ -51,7 +52,6 @@
         #map-container {
             position: absolute; width: 2400px; height: 2400px; 
             left: 50%; top: 50%;
-            /* Restored the aggressive 3D tilt */
             transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
             pointer-events: auto; 
@@ -66,14 +66,11 @@
             width: 100%; height: 100%; position: relative; 
             transform-style: preserve-3d; background-size: cover; 
             cursor: pointer;
-            margin: -0.1px; /* Prevents tiny gaps between tiles */
         }
-        .tile:hover { filter: brightness(1.2); }
 
         /* --- BUILDINGS --- */
         .building-wrapper {
             position: absolute; bottom: 15%; left: 50%; 
-            /* Rotates buildings to stand upright relative to the tilted map */
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
             transform-origin: bottom center; z-index: 10;
             display: flex; flex-direction: column; align-items: center;
@@ -88,10 +85,12 @@
             border: 2px solid #000; pointer-events: none; display: none;
         }
 
+        .size-1x1 { width: 40px; height: 60px; }
         .size-2x2 { width: 80px; height: 120px; }
+        .size-3x3 { width: 120px; height: 180px; }
         .size-4x4 { width: 160px; height: 240px; }
 
-        /* --- UI BUTTONS --- */
+        /* --- SHOP --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .shop-btn { width: 120px; cursor: pointer; }
         #shop-layer {
@@ -135,11 +134,8 @@
         <div class="shop-container">
             <button id="close-shop" style="float:right; cursor:pointer;">X</button>
             <h2 style="text-align:center; color:black;">SHOP</h2>
-            <div class="shop-grid">
-                <div class="shop-item" data-type="gold_mine"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/gold_mine.png?raw=true" width="60"><br>Gold Mine</div>
-                <div class="shop-item" data-type="elixir_collector"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/elixir_collector.png?raw=true" width="60"><br>Elixir Coll.</div>
-                <div class="shop-item" data-type="townhall1"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/townhall1.png?raw=true" width="60"><br>Town Hall</div>
-            </div>
+            <div class="shop-grid" id="shop-items-container">
+                </div>
         </div>
     </div>
 
@@ -164,6 +160,27 @@
         let buildingsData = []; 
         let selectedBuilding = null;
 
+        const shopItems = [
+            { id: 'gold_mine', name: 'Gold Mine', size: 'size-2x2' },
+            { id: 'elixir_collector', name: 'Elixir Collector', size: 'size-2x2' },
+            { id: 'townhall1', name: 'Town Hall 1', size: 'size-4x4' },
+            { id: 'townhall2', name: 'Town Hall 2', size: 'size-4x4' },
+            { id: 'townhall3', name: 'Town Hall 3', size: 'size-4x4' },
+            { id: 'townhall4', name: 'Town Hall 4', size: 'size-4x4' },
+            { id: 'townhall5', name: 'Town Hall 5', size: 'size-4x4' },
+            { id: 'townhall6', name: 'Town Hall 6', size: 'size-4x4' },
+            { id: 'townhall7', name: 'Town Hall 7', size: 'size-4x4' },
+            { id: 'townhall8', name: 'Town Hall 8', size: 'size-4x4' },
+            { id: 'townhall9', name: 'Town Hall 9', size: 'size-4x4' },
+            { id: 'townhall10', name: 'Town Hall 10', size: 'size-4x4' },
+            { id: 'townhall11', name: 'Town Hall 11', size: 'size-4x4' },
+            { id: 'townhall12', name: 'Town Hall 12', size: 'size-4x4' },
+            { id: 'townhall13', name: 'Town Hall 13', size: 'size-4x4' },
+            { id: 'townhall14', name: 'Town Hall 14', size: 'size-4x4' },
+            { id: 'townhall15', name: 'Town Hall 15', size: 'size-4x4' },
+            { id: 'townhall16', name: 'Town Hall 16', size: 'size-4x4' }
+        ];
+
         const world = document.getElementById('world-surface');
         const viewport = document.getElementById('game-viewport');
         let isPanning = false;
@@ -187,10 +204,14 @@
                 tile.className = 'tile';
                 tile.id = `tile-${i}`;
                 
-                // RESTORED: Random grass for organic look
-                const randomImg = grassUrls[Math.floor(Math.random() * grassUrls.length)];
-                tile.style.backgroundImage = `url('${randomImg}')`;
+                const idx = Math.floor(Math.random() * 5);
+                tile.style.backgroundImage = `url('${grassUrls[idx]}')`;
                 
+                // Debugger for missing images
+                const img = new Image();
+                img.src = grassUrls[idx];
+                img.onerror = () => console.error(`Missing tile: grass${idx}. Check GitHub path/case!`);
+
                 tile.onclick = (e) => {
                     if (dragActive) return;
                     if (selectedBuilding) {
@@ -203,60 +224,51 @@
             updateWorldPos();
         }
 
-        // --- CAMERA PANNING ---
+        function populateShop() {
+            const container = document.getElementById('shop-items-container');
+            shopItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'shop-item';
+                div.dataset.type = item.id;
+                div.innerHTML = `<img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${item.id}.png?raw=true" width="60"><br>${item.name}`;
+                div.onclick = () => {
+                    selectedBuilding = item.id;
+                    document.getElementById('shop-layer').style.display = 'none';
+                };
+                container.appendChild(div);
+            });
+        }
+
+        // Camera Logic
         viewport.onmousedown = (e) => {
             if(e.target.closest('.shop-btn') || e.target.closest('#shop-layer')) return;
-            isPanning = true;
-            dragActive = false;
-            panStartX = e.clientX - currentX;
-            panStartY = e.clientY - currentY;
+            isPanning = true; dragActive = false;
+            panStartX = e.clientX - currentX; panStartY = e.clientY - currentY;
         };
-
         window.onmousemove = (e) => {
             if (!isPanning) return;
             dragActive = true;
-            currentX = e.clientX - panStartX;
-            currentY = e.clientY - panStartY;
+            currentX = e.clientX - panStartX; currentY = e.clientY - panStartY;
             updateWorldPos();
         };
-
         window.onmouseup = () => isPanning = false;
+        function updateWorldPos() { world.style.left = currentX + "px"; world.style.top = currentY + "px"; }
 
-        function updateWorldPos() {
-            world.style.left = currentX + "px";
-            world.style.top = currentY + "px";
-        }
-
-        // --- BUILDING & COLLECTION ---
         function spawnBuilding(tileId, type, shouldSave = false) {
             const tile = document.getElementById(`tile-${tileId}`);
             if (!tile || tile.querySelector('.building-wrapper')) return;
 
-            let size = (type === 'townhall1') ? 'size-4x4' : 'size-2x2';
-            const wrapper = document.createElement('div');
-            wrapper.className = `building-wrapper ${size}`;
-            
-            const bubble = document.createElement('div');
-            bubble.className = 'collect-bubble';
-            wrapper.appendChild(bubble);
+            const item = shopItems.find(s => s.id === type);
+            const sizeClass = item ? item.size : 'size-2x2';
 
-            const img = document.createElement('div');
-            img.className = 'building-img';
-            img.style.backgroundImage = `url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${type}.png?raw=true')`;
-            wrapper.appendChild(img);
+            const wrapper = document.createElement('div');
+            wrapper.className = `building-wrapper ${sizeClass}`;
+            wrapper.innerHTML = `<div class="collect-bubble"></div><div class="building-img" style="background-image: url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${type}.png?raw=true')"></div>`;
 
             tile.appendChild(wrapper);
+            wrapper.onclick = (e) => { e.stopPropagation(); if(!dragActive) collectResources(tileId); };
 
-            wrapper.onclick = (e) => {
-                e.stopPropagation();
-                if(dragActive) return;
-                collectResources(tileId);
-            };
-
-            if (shouldSave) {
-                buildingsData.push({ tileId, type, stored: 0 });
-                saveGame();
-            }
+            if (shouldSave) { buildingsData.push({ tileId, type, stored: 0 }); saveGame(); }
         }
 
         function collectResources(tileId) {
@@ -264,27 +276,18 @@
             if (!b || b.stored === 0) return;
             if (b.type === 'gold_mine') resources.gold += b.stored;
             if (b.type === 'elixir_collector') resources.elixir += b.stored;
-            b.stored = 0;
-            updateUI();
-            updateBubbles();
-            saveGame();
+            b.stored = 0; updateUI(); updateBubbles(); saveGame();
         }
 
         setInterval(() => {
-            buildingsData.forEach(b => {
-                if (b.type === 'gold_mine' || b.type === 'elixir_collector') b.stored += 1;
-            });
+            buildingsData.forEach(b => { if (b.type.includes('mine') || b.type.includes('collector')) b.stored += 1; });
             updateBubbles();
         }, 3000);
 
         function updateBubbles() {
             buildingsData.forEach(b => {
-                const tile = document.getElementById(`tile-${b.tileId}`);
-                const bubble = tile?.querySelector('.collect-bubble');
-                if (bubble) {
-                    bubble.innerText = b.stored;
-                    bubble.style.display = b.stored > 0 ? 'block' : 'none';
-                }
+                const bubble = document.getElementById(`tile-${b.tileId}`)?.querySelector('.collect-bubble');
+                if (bubble) { bubble.innerText = b.stored; bubble.style.display = b.stored > 0 ? 'block' : 'none'; }
             });
         }
 
@@ -294,16 +297,12 @@
         }
 
         function saveGame() { set(ref(db, 'users/player1'), { resources, buildings: buildingsData }); }
-
         function loadGame() {
             onValue(ref(db, 'users/player1'), (snap) => {
                 const d = snap.val();
                 if (d) {
                     resources = d.resources; updateUI();
-                    if (d.buildings) {
-                        buildingsData = d.buildings;
-                        buildingsData.forEach(b => spawnBuilding(b.tileId, b.type, false));
-                    }
+                    if (d.buildings) { buildingsData = d.buildings; buildingsData.forEach(b => spawnBuilding(b.tileId, b.type, false)); }
                 }
             }, { onlyOnce: true });
         }
@@ -325,14 +324,9 @@
 
         document.getElementById('shop-trigger').onclick = () => document.getElementById('shop-layer').style.display = 'flex';
         document.getElementById('close-shop').onclick = () => document.getElementById('shop-layer').style.display = 'none';
-        document.querySelectorAll('.shop-item').forEach(item => {
-            item.onclick = () => {
-                selectedBuilding = item.dataset.type;
-                document.getElementById('shop-layer').style.display = 'none';
-            };
-        });
 
         setupGrid();
+        populateShop();
         loadGame();
     </script>
 </body>
