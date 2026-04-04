@@ -9,10 +9,9 @@
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; font-family: 'Luckiest Guy', cursive;
-            background-color: #0e3d06; /* Dark green fallback */
+            background-color: #0e3d06;
         }
 
-        /* --- THE WORLD BACKGROUND --- */
         #world-bg {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-image: url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/background/background.png?raw=true');
@@ -20,7 +19,6 @@
             z-index: -1; 
         }
 
-        /* --- INTRO SCREEN --- */
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; display: flex; justify-content: center;
@@ -30,16 +28,10 @@
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
-        /* --- GAME VIEWPORT --- */
-        #game-viewport {
-            width: 100vw; height: 100vh;
-            position: relative; overflow: hidden;
-            touch-action: none; /* Prevents mobile interference */
-        }
+        #game-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; touch-action: none; }
 
         #map-container {
-            position: absolute;
-            width: 2400px; height: 2400px; 
+            position: absolute; width: 2400px; height: 2400px; 
             transform: rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
             will-change: transform, left, top;
@@ -47,40 +39,51 @@
 
         .grid-layer {
             position: absolute; width: 100%; height: 100%;
-            display: grid;
-            grid-template-columns: repeat(40, 1fr); 
-            grid-template-rows: repeat(40, 1fr);
+            display: grid; grid-template-columns: repeat(40, 1fr); grid-template-rows: repeat(40, 1fr);
         }
 
         .tile {
-            width: 100%; height: 100%;
-            background-size: cover;
-            margin: -0.2px; 
-            transition: filter 0.1s;
+            width: 100%; height: 100%; background-size: cover;
+            margin: -0.2px; transition: filter 0.1s;
+            position: relative; transform-style: preserve-3d;
         }
 
-        /* Highlight tile on hover/touch */
-        .tile:hover {
-            filter: brightness(1.3) saturate(1.2);
-            cursor: pointer;
-            outline: 1px solid rgba(255,255,255,0.3);
+        .tile:hover { filter: brightness(1.3); cursor: pointer; outline: 1px solid rgba(255,255,255,0.3); }
+
+        /* --- BUILDING STYLE --- */
+        .building {
+            position: absolute;
+            bottom: 10%; left: 50%;
+            width: 150%; height: 150%; /* Buildings usually overlap tiles slightly */
+            transform: translate(-50%, 0) rotateZ(45deg) rotateX(-60deg); /* Counter-rotate to stand upright */
+            background-size: contain; background-repeat: no-repeat;
+            background-position: bottom;
+            pointer-events: none; /* Let clicks go through to the tile */
+            z-index: 10;
         }
 
-        /* --- UI --- */
+        /* --- UI & SHOP --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 10; }
         .shop-btn { width: 120px; cursor: pointer; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); transition: transform 0.1s; }
-        .shop-btn:active { transform: scale(0.9); }
-
+        
         #shop-layer {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7); z-index: 100;
             justify-content: center; align-items: center;
         }
         .shop-container {
-            width: 95vw; height: 90vh; background: #d3d7c6; border: 4px solid #1a1a1a;
-            border-radius: 12px; display: flex; flex-direction: column; position: relative;
+            width: 80vw; height: 60vh; background: #d3d7c6; border: 4px solid #1a1a1a;
+            border-radius: 12px; display: flex; flex-direction: column; padding: 20px;
         }
-        .close-btn { position: absolute; top: 5px; right: 10px; background: #ff3131; border: 3px solid #000; border-radius: 5px; padding: 5px 12px; cursor: pointer; color: white; }
+        .shop-items { display: flex; gap: 20px; justify-content: center; margin-top: 50px; }
+        .shop-item { 
+            background: #aeb49a; border: 3px solid #444; padding: 10px; cursor: pointer;
+            text-align: center; border-radius: 8px;
+        }
+        .shop-item:hover { background: #c5ccb1; }
+        .shop-item img { width: 80px; height: 80px; object-fit: contain; }
+
+        .close-btn { position: absolute; top: 10px; right: 10px; background: #ff3131; border: 2px solid #000; color: white; cursor: pointer; padding: 5px 10px; }
     </style>
 </head>
 <body onload="startIntroSequence()">
@@ -110,98 +113,78 @@
     <div id="shop-layer">
         <div class="shop-container">
             <div class="close-btn" onclick="toggleShop(false)">X</div>
-            <p style="text-align:center; color:black; font-size: 30px;">SHOP</p>
+            <h2 style="text-align:center; color: #333;">BUILDINGS</h2>
+            <div class="shop-items">
+                <div class="shop-item" onclick="selectBuilding('townhall')">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/townhall.png?raw=true">
+                    <p>Town Hall</p>
+                </div>
+                </div>
         </div>
     </div>
 
     <script>
-        // --- GRID GENERATION ---
         const gridSize = 40; 
-        const totalTiles = gridSize * gridSize;
         const gridLayer = document.getElementById('grid-layer');
-        const images = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
-        
-        let tilePool = [];
-        for (let i = 0; i < totalTiles; i++) tilePool.push(images[i % images.length]);
+        let selectedBuildingToPlace = null; // Stores what we are currently building
 
-        for (let i = tilePool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [tilePool[i], tilePool[j]] = [tilePool[j], tilePool[i]];
-        }
-
-        const placedTiles = [];
-        for (let i = 0; i < totalTiles; i++) {
+        // --- GRID GENERATION ---
+        const grassImgs = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
+        for (let i = 0; i < gridSize * gridSize; i++) {
             const tile = document.createElement('div');
             tile.className = 'tile';
             tile.dataset.id = i;
+            tile.style.backgroundImage = `url('${grassImgs[Math.floor(Math.random() * grassImgs.length)]}')`;
             
-            // Tile Click Interaction
             tile.onclick = (e) => {
-                if (isActuallyDragging) return; // Don't click if we are just panning
-                console.log("Clicked tile:", tile.dataset.id);
-                tile.style.filter = "brightness(2)"; // Visual feedback
-                setTimeout(() => tile.style.filter = "", 200);
-            };
-
-            const leftN = (i % gridSize !== 0) ? placedTiles[i - 1] : null;
-            const topN = (i >= gridSize) ? placedTiles[i - gridSize] : null;
-
-            let foundIdx = 0;
-            for (let j = 0; j < tilePool.length; j++) {
-                if (tilePool[j] !== leftN && tilePool[j] !== topN) {
-                    foundIdx = j; break;
+                if (isActuallyDragging) return;
+                
+                // If we have a building selected from shop, place it!
+                if (selectedBuildingToPlace) {
+                    placeBuilding(tile, selectedBuildingToPlace);
+                    selectedBuildingToPlace = null; // Reset selection
                 }
-            }
-
-            const selectedImg = tilePool[foundIdx];
-            tile.style.backgroundImage = `url('${selectedImg}')`;
-            placedTiles.push(selectedImg);
-            tilePool.splice(foundIdx, 1);
+            };
             gridLayer.appendChild(tile);
         }
 
-        // --- CAMERA PANNING (LEFT CLICK) ---
-        const viewport = document.getElementById('game-viewport');
+        function selectBuilding(type) {
+            selectedBuildingToPlace = type;
+            toggleShop(false);
+            console.log("Placing mode: " + type + ". Click a tile!");
+        }
+
+        function placeBuilding(tile, type) {
+            // Check if tile already has a building
+            if (tile.querySelector('.building')) return;
+
+            const b = document.createElement('div');
+            b.className = 'building';
+            // Path to your building image
+            b.style.backgroundImage = `url('shop/${type}.png')`;
+            tile.appendChild(b);
+        }
+
+        // --- CAMERA PANNING ---
         const map = document.getElementById('map-container');
-        let isMouseDown = false;
-        let isActuallyDragging = false; 
+        let isMouseDown = false, isActuallyDragging = false;
         let startX, startY;
-        let mapX = (window.innerWidth / 2) - 1200;
-        let mapY = (window.innerHeight / 2) - 800;
+        let mapX = (window.innerWidth / 2) - 1200, mapY = (window.innerHeight / 2) - 800;
+        map.style.left = mapX + "px"; map.style.top = mapY + "px";
 
-        map.style.left = mapX + "px";
-        map.style.top = mapY + "px";
-
-        viewport.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            isActuallyDragging = false;
-            startX = e.clientX - mapX;
-            startY = e.clientY - mapY;
-        });
-
-        window.addEventListener('mousemove', (e) => {
+        document.getElementById('game-viewport').onmousedown = (e) => {
+            isMouseDown = true; isActuallyDragging = false;
+            startX = e.clientX - mapX; startY = e.clientY - mapY;
+        };
+        window.onmousemove = (e) => {
             if (!isMouseDown) return;
-            isActuallyDragging = true; // We moved, so it's a drag, not a click
-            mapX = e.clientX - startX;
-            mapY = e.clientY - startY;
-            map.style.left = mapX + "px";
-            map.style.top = mapY + "px";
-        });
+            isActuallyDragging = true;
+            mapX = e.clientX - startX; mapY = e.clientY - startY;
+            map.style.left = mapX + "px"; map.style.top = mapY + "px";
+        };
+        window.onmouseup = () => { isMouseDown = false; setTimeout(() => isActuallyDragging = false, 10); };
 
-        window.addEventListener('mouseup', () => {
-            isMouseDown = false;
-            // Short delay to reset drag state so clicks don't fire immediately after drag
-            setTimeout(() => { isActuallyDragging = false; }, 10);
-        });
-
-        // --- INTRO & MUSIC ---
-        const playlist = [
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
-        ];
-        let currentTrack = 0;
-        const bgMusic = document.getElementById('bg-music');
-
+        // --- INTRO & SHOP ---
         function startIntroSequence() {
             document.getElementById('intro-audio').play().catch(e => {});
             setTimeout(() => {
@@ -209,12 +192,9 @@
                 document.getElementById('intro-1').classList.add('active');
                 setTimeout(() => {
                     document.getElementById('intro-overlay').classList.add('hidden');
-                    bgMusic.src = playlist[0];
-                    bgMusic.play().catch(e => {});
                 }, 3000);
             }, 2000);
         }
-
         function toggleShop(show) { document.getElementById('shop-layer').style.display = show ? 'flex' : 'none'; }
     </script>
 </body>
