@@ -130,7 +130,7 @@
             align-items: center;
             position: relative;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-            overflow: hidden; /* Ensures the full PNG stays inside the borders */
+            overflow: hidden;
         }
 
         .card-header {
@@ -146,11 +146,12 @@
             object-fit: contain;
         }
 
-        /* Specialized style for the full-image Army Camp card */
+        /* Fixed zoom by using 'contain' and a background color */
         .full-png-img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            background-color: #8e8e8e; /* Matches the other card backgrounds */
         }
 
         .price-bar {
