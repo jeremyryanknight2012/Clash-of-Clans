@@ -85,6 +85,7 @@
             border: 2px solid #000; pointer-events: none; display: none;
         }
 
+        /* Responsive sizes for different shop items */
         .size-1x1 { width: 40px; height: 60px; }
         .size-2x2 { width: 80px; height: 120px; }
         .size-3x3 { width: 120px; height: 180px; }
@@ -98,8 +99,8 @@
             background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center;
         }
         .shop-container { width: 90vw; height: 80vh; background: #d3d7c6; border: 4px solid #1a1a1a; border-radius: 12px; padding: 20px; overflow-y: auto; }
-        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 20px; margin-top: 20px; justify-items: center; }
-        .shop-item { cursor: pointer; text-align: center; color: black; background: rgba(255,255,255,0.3); padding: 10px; border-radius: 8px; border: 2px solid #000; width: 100px; }
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 20px; justify-items: center; }
+        .shop-item { cursor: pointer; text-align: center; color: black; background: rgba(255,255,255,0.3); padding: 10px; border-radius: 8px; border: 2px solid #000; width: 110px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -114,7 +115,6 @@
         <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
     </div>
-
     <audio id="intro-audio" preload="auto"><source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg"></audio>
     <audio id="bg-music" loop></audio>
 
@@ -134,8 +134,7 @@
         <div class="shop-container">
             <button id="close-shop" style="float:right; cursor:pointer;">X</button>
             <h2 style="text-align:center; color:black;">SHOP</h2>
-            <div class="shop-grid" id="shop-items-container">
-                </div>
+            <div class="shop-grid" id="shop-items-container"></div>
         </div>
     </div>
 
@@ -143,6 +142,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+        // Config setup
         const firebaseConfig = {
             apiKey: "AIzaSyDtAQZBz45bfocaqj08uUXLfPL9vFScstc",
             authDomain: "clash-of-clans-4c664.firebaseapp.com",
@@ -152,7 +152,6 @@
             messagingSenderId: "417308170977",
             appId: "1:417308170977:web:ef0cd85423f830f4ecb5a0"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
@@ -160,34 +159,24 @@
         let buildingsData = []; 
         let selectedBuilding = null;
 
+        // Expanded Shop List
         const shopItems = [
             { id: 'gold_mine', name: 'Gold Mine', size: 'size-2x2' },
             { id: 'elixir_collector', name: 'Elixir Collector', size: 'size-2x2' },
+            { id: 'gold_storage', name: 'Gold Storage', size: 'size-3x3' },
+            { id: 'elixir_storage', name: 'Elixir Storage', size: 'size-3x3' },
             { id: 'townhall1', name: 'Town Hall 1', size: 'size-4x4' },
-            { id: 'townhall2', name: 'Town Hall 2', size: 'size-4x4' },
-            { id: 'townhall3', name: 'Town Hall 3', size: 'size-4x4' },
-            { id: 'townhall4', name: 'Town Hall 4', size: 'size-4x4' },
-            { id: 'townhall5', name: 'Town Hall 5', size: 'size-4x4' },
-            { id: 'townhall6', name: 'Town Hall 6', size: 'size-4x4' },
-            { id: 'townhall7', name: 'Town Hall 7', size: 'size-4x4' },
-            { id: 'townhall8', name: 'Town Hall 8', size: 'size-4x4' },
-            { id: 'townhall9', name: 'Town Hall 9', size: 'size-4x4' },
-            { id: 'townhall10', name: 'Town Hall 10', size: 'size-4x4' },
-            { id: 'townhall11', name: 'Town Hall 11', size: 'size-4x4' },
-            { id: 'townhall12', name: 'Town Hall 12', size: 'size-4x4' },
-            { id: 'townhall13', name: 'Town Hall 13', size: 'size-4x4' },
-            { id: 'townhall14', name: 'Town Hall 14', size: 'size-4x4' },
-            { id: 'townhall15', name: 'Town Hall 15', size: 'size-4x4' },
-            { id: 'townhall16', name: 'Town Hall 16', size: 'size-4x4' }
+            { id: 'barracks', name: 'Barracks', size: 'size-2x2' },
+            { id: 'army_camp', name: 'Army Camp', size: 'size-4x4' },
+            { id: 'cannon', name: 'Cannon', size: 'size-2x2' },
+            { id: 'archer_tower', name: 'Archer Tower', size: 'size-2x2' },
+            { id: 'walls', name: 'Walls', size: 'size-1x1' }
         ];
 
         const world = document.getElementById('world-surface');
         const viewport = document.getElementById('game-viewport');
-        let isPanning = false;
-        let panStartX, panStartY;
-        let currentX = (window.innerWidth / 2) - 2500;
-        let currentY = (window.innerHeight / 2) - 2500;
-        let dragActive = false;
+        let isPanning = false, dragActive = false;
+        let panStartX, panStartY, currentX = (window.innerWidth / 2) - 2500, currentY = (window.innerHeight / 2) - 2500;
 
         function setupGrid() {
             const gridLayer = document.getElementById('grid-layer');
@@ -203,14 +192,8 @@
                 const tile = document.createElement('div');
                 tile.className = 'tile';
                 tile.id = `tile-${i}`;
-                
                 const idx = Math.floor(Math.random() * 5);
                 tile.style.backgroundImage = `url('${grassUrls[idx]}')`;
-                
-                // Debugger for missing images
-                const img = new Image();
-                img.src = grassUrls[idx];
-                img.onerror = () => console.error(`Missing tile: grass${idx}. Check GitHub path/case!`);
 
                 tile.onclick = (e) => {
                     if (dragActive) return;
@@ -226,10 +209,10 @@
 
         function populateShop() {
             const container = document.getElementById('shop-items-container');
+            container.innerHTML = '';
             shopItems.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'shop-item';
-                div.dataset.type = item.id;
                 div.innerHTML = `<img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${item.id}.png?raw=true" width="60"><br>${item.name}`;
                 div.onclick = () => {
                     selectedBuilding = item.id;
@@ -239,7 +222,6 @@
             });
         }
 
-        // Camera Logic
         viewport.onmousedown = (e) => {
             if(e.target.closest('.shop-btn') || e.target.closest('#shop-layer')) return;
             isPanning = true; dragActive = false;
@@ -280,7 +262,7 @@
         }
 
         setInterval(() => {
-            buildingsData.forEach(b => { if (b.type.includes('mine') || b.type.includes('collector')) b.stored += 1; });
+            buildingsData.forEach(b => { if (b.type === 'gold_mine' || b.type === 'elixir_collector') b.stored += 1; });
             updateBubbles();
         }, 3000);
 
