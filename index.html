@@ -18,47 +18,49 @@
             background-size: cover; background-position: center; z-index: -1; 
         }
 
-        /* --- TOP RESOURCE BAR --- */
+        /* --- UI LAYERS --- */
         #resource-bar {
             position: fixed; top: 10px; right: 10px; display: flex; flex-direction: column; 
-            gap: 8px; z-index: 5000; align-items: flex-end;
+            gap: 8px; z-index: 10000; align-items: flex-end;
         }
         .res-item {
-            background: rgba(0,0,0,0.6); border: 2px solid #333; border-radius: 20px;
+            background: rgba(0,0,0,0.7); border: 2px solid #333; border-radius: 20px;
             display: flex; align-items: center; padding: 2px 15px; min-width: 160px; justify-content: space-between;
             color: white; font-size: 18px; text-shadow: 2px 2px #000;
         }
         .res-icon { width: 35px; height: 35px; margin-left: 10px; }
 
-        /* --- INTRO SCREEN --- */
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; display: flex; justify-content: center;
-            align-items: center; z-index: 9999; cursor: pointer;
+            align-items: center; z-index: 20000; cursor: pointer;
         }
-        #intro-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.8s ease-out; }
+        #intro-overlay.hidden { display: none; visibility: hidden; pointer-events: none; }
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
-        /* --- GAME ENGINE --- */
-        #game-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; pointer-events: auto; }
-        
+        /* --- MAP ENGINE --- */
+        #game-viewport { 
+            width: 100vw; height: 100vh; position: relative; 
+            overflow: hidden; cursor: grab; z-index: 10;
+        }
+        #game-viewport:active { cursor: grabbing; }
+
         #map-container {
             position: absolute; width: 2400px; height: 2400px; 
             transform: rotateX(60deg) rotateZ(-45deg); transform-style: preserve-3d;
-            pointer-events: none; /* Let clicks pass through to the grid-layer */
+            pointer-events: none; /* Allows clicks to reach grid-layer */
         }
 
         .grid-layer {
             position: absolute; width: 100%; height: 100%;
             display: grid; grid-template-columns: repeat(40, 1fr); grid-template-rows: repeat(40, 1fr);
-            z-index: 5; pointer-events: auto; /* This is the clickable layer */
+            pointer-events: auto; z-index: 20;
         }
 
         .tile { 
             width: 100%; height: 100%; position: relative; 
-            transform-style: preserve-3d; outline: 1px solid rgba(255,255,255,0.05);
-            cursor: pointer;
+            transform-style: preserve-3d;
         }
 
         /* --- BUILDINGS --- */
@@ -66,7 +68,7 @@
             position: absolute; bottom: 10%; left: 50%; 
             background-size: contain; background-repeat: no-repeat; background-position: bottom center;
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
-            transform-origin: bottom center; z-index: 10; pointer-events: none;
+            transform-origin: bottom center; z-index: 30; pointer-events: none;
         }
         .size-1x1 { width: 100%; height: 150%; }
         .size-2x2 { width: 200%; height: 300%; }
@@ -74,44 +76,30 @@
         .size-4x4 { width: 400%; height: 600%; }
 
         .collect-bubble {
-            position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
-            width: 55px; height: 55px; background: white; border: 3px solid #333;
+            position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+            width: 60px; height: 60px; background: white; border: 3px solid #333;
             border-radius: 50%; z-index: 100; cursor: pointer; pointer-events: auto;
             display: flex; justify-content: center; align-items: center;
-            animation: bounce 2s infinite ease-in-out;
         }
-        .collect-bubble img { width: 75%; pointer-events: none; }
-        @keyframes bounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -15px); } }
 
-        /* --- SHOP UI --- */
-        .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 6000; }
-        .shop-btn { width: 120px; cursor: pointer; }
+        /* --- SHOP --- */
+        .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 15000; }
         #shop-layer {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); z-index: 7000; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.8); z-index: 30000; justify-content: center; align-items: center;
         }
-        .shop-container { 
-            width: 90vw; height: 80vh; background: #d3d7c6; border: 4px solid #1a1a1a; 
-            border-radius: 12px; position: relative; padding: 20px; overflow-y: auto;
-        }
-        .shop-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 20px; margin-top: 20px; justify-items: center;
-        }
-        .shop-item {
-            cursor: pointer; text-align: center; color: black; background: rgba(255,255,255,0.3);
-            padding: 10px; border-radius: 8px; border: 2px solid #000; width: 100px;
-        }
-
-        #save-status {
-            position: fixed; bottom: 10px; left: 10px; color: rgba(255,255,255,0.7);
-            font-size: 14px; z-index: 8000; pointer-events: none; background: rgba(0,0,0,0.3); padding: 5px;
-        }
+        .shop-container { width: 85vw; height: 75vh; background: #d3d7c6; border: 5px solid #1a1a1a; padding: 20px; overflow-y: auto; }
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 15px; }
+        .shop-item { background: #fff3; padding: 10px; border: 2px solid #000; border-radius: 10px; text-align: center; cursor: pointer; color: #000; }
     </style>
 </head>
 <body>
 
-    <div id="save-status">VILLAGE SYNCED</div>
+    <div id="intro-overlay">
+        <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
+        <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
+        <p style="color:white; position:absolute; bottom:15%; font-size: 24px;">CLICK TO ENTER VILLAGE</p>
+    </div>
 
     <div id="resource-bar">
         <div class="res-item"><span id="gold-val">750</span> <img class="res-icon" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/coin.png?raw=true"></div>
@@ -120,15 +108,6 @@
         <div class="res-item"><span id="gem-val">500</span> <img class="res-icon" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/gem.png?raw=true"></div>
     </div>
 
-    <div id="intro-overlay">
-        <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
-        <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
-        <p style="color:white; position:absolute; bottom:15%;">CLICK TO START</p>
-    </div>
-
-    <audio id="bg-music" loop></audio>
-    <audio id="intro-audio"><source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg"></audio>
-
     <div id="game-viewport">
         <div id="map-container">
             <div id="grid-layer" class="grid-layer"></div>
@@ -136,36 +115,13 @@
     </div>
 
     <div class="bottom-right-ui">
-        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" class="shop-btn" id="shop-trigger">
+        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" width="120" style="cursor:pointer;" onclick="document.getElementById('shop-layer').style.display='flex'">
     </div>
 
     <div id="shop-layer">
         <div class="shop-container">
-            <button id="close-shop" style="float:right; padding: 10px; cursor:pointer;">CLOSE</button>
-            <h2 style="text-align:center; color:black;">SHOP</h2>
-            <div class="shop-grid">
-                <div class="shop-item" data-type="gold_mine">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/gold_mine.png?raw=true" width="60" style="pointer-events:none;"><br>Gold Mine
-                </div>
-                <div class="shop-item" data-type="elixir_collector">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/elixir_collector.png?raw=true" width="60" style="pointer-events:none;"><br>Elixir Coll.
-                </div>
-                <div class="shop-item" data-type="gold_storage">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/gold_storage.png?raw=true" width="60" style="pointer-events:none;"><br>Gold Storage
-                </div>
-                <div class="shop-item" data-type="elixir_storage">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/elixir_storage.png?raw=true" width="60" style="pointer-events:none;"><br>Elixir Storage
-                </div>
-                <div class="shop-item" data-type="barracks">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/barracks.png?raw=true" width="60" style="pointer-events:none;"><br>Barracks
-                </div>
-                <div class="shop-item" data-type="cannon">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/cannon.png?raw=true" width="60" style="pointer-events:none;"><br>Cannon
-                </div>
-                <div class="shop-item" data-type="builder_hut">
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/builder_hut.png?raw=true" width="60" style="pointer-events:none;"><br>Builder Hut
-                </div>
-            </div>
+            <button onclick="document.getElementById('shop-layer').style.display='none'">CLOSE</button>
+            <div class="shop-grid" id="shop-items-container"></div>
         </div>
     </div>
 
@@ -180,158 +136,86 @@
             projectId: "clash-of-clans-4c664",
             storageBucket: "clash-of-clans-4c664.firebasestorage.app",
             messagingSenderId: "417308170977",
-            appId: "1:417308170977:web:ef0cd85423f830f4ecb5a0",
-            measurementId: "G-XY5Q04934M"
+            appId: "1:417308170977:web:ef0cd85423f830f4ecb5a0"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
         let resources = { gold: 750, elixir: 750, dark: 0, gems: 500 };
-        let buildingsData = []; 
+        let buildingsData = [];
         let mapX = (window.innerWidth/2)-1200, mapY = (window.innerHeight/2)-800;
-        let isMouseDown = false, isDragging = false, selectedBuilding = null;
+        let isMouseDown = false, isDragging = false, selectedType = null;
         let startX, startY;
 
-        const bgMusic = document.getElementById('bg-music');
-        const playlist = [
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3"
-        ];
+        const types = ['gold_mine', 'elixir_collector', 'gold_storage', 'elixir_storage', 'barracks', 'cannon', 'builder_hut'];
 
         window.onload = () => {
-            initGrid();
-            loadGame(); 
-            setupEvents();
-            setInterval(() => saveGame("Autosave"), 60000);
+            const grid = document.getElementById('grid-layer');
+            for(let i=0; i<1600; i++){
+                const t = document.createElement('div');
+                t.className = 'tile';
+                t.onclick = () => { if(!isDragging && selectedType) { spawn(i, selectedType, true); selectedType = null; } };
+                grid.appendChild(t);
+            }
+            
+            const shop = document.getElementById('shop-items-container');
+            types.forEach(type => {
+                const item = document.createElement('div');
+                item.className = 'shop-item';
+                item.innerHTML = `<img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${type}.png?raw=true" width="60"><br>${type.replace('_',' ')}`;
+                item.onclick = () => { selectedType = type; document.getElementById('shop-layer').style.display='none'; };
+                shop.appendChild(item);
+            });
+
+            load();
+            updateMap();
+
+            document.getElementById('intro-overlay').onclick = function() { this.classList.add('hidden'); };
         };
 
-        function initGrid() {
-            const grid = document.getElementById('grid-layer');
-            const grassImgs = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
-            for (let i = 0; i < 1600; i++) {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.id = `tile-${i}`;
-                tile.style.backgroundImage = `url('${grassImgs[Math.floor(Math.random()*5)]}')`;
-                tile.addEventListener('click', (e) => {
-                    if (isDragging) return;
-                    if (selectedBuilding) {
-                        spawnBuilding(i, selectedBuilding, true);
-                        selectedBuilding = null;
-                    }
-                });
-                grid.appendChild(tile);
-            }
-            updateMapPosition();
-        }
+        function spawn(id, type, save = false) {
+            const tile = document.getElementById(`grid-layer`).children[id];
+            if(!tile || tile.innerHTML !== "") return;
 
-        function spawnBuilding(tileId, type, shouldSave = false) {
-            const tile = document.getElementById(`tile-${tileId}`);
-            if (!tile || tile.querySelector('.building')) return;
-
-            let sizeClass = 'size-2x2';
-            if (type === 'townhall1') sizeClass = 'size-4x4';
-            if (type.includes('storage')) sizeClass = 'size-3x3';
-            if (type === 'builder_hut') sizeClass = 'size-1x1';
+            let sz = 'size-2x2';
+            if(type.includes('storage')) sz = 'size-3x3';
+            if(type === 'builder_hut') sz = 'size-1x1';
+            if(type === 'townhall1') sz = 'size-4x4';
 
             const b = document.createElement('div');
-            b.className = `building ${sizeClass}`;
+            b.className = `building ${sz}`;
             b.style.backgroundImage = `url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${type}.png?raw=true')`;
             tile.appendChild(b);
 
-            if (type === 'gold_mine' || type === 'elixir_collector') {
-                setupCollector(tile, type);
-            }
-
-            if (shouldSave) {
-                buildingsData.push({ tileId, type });
-                saveGame("Placed " + type);
-            }
+            if(save) { buildingsData.push({id, type}); saveGame(); }
         }
 
-        function setupCollector(tile, type) {
-            const resType = type.includes('gold') ? 'gold' : 'elixir';
-            const icon = resType === 'gold' ? 'coin' : 'elixir';
-            
-            // Set an interval to show bubbles
-            setInterval(() => {
-                if (!tile.querySelector('.collect-bubble')) {
-                    const bubble = document.createElement('div');
-                    bubble.className = 'collect-bubble';
-                    bubble.innerHTML = `<img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/${icon}.png?raw=true">`;
-                    bubble.onclick = (e) => {
-                        e.stopPropagation();
-                        resources[resType] += 50;
-                        updateUI();
-                        saveGame("Loot Collected");
-                        bubble.remove();
-                    };
-                    tile.appendChild(bubble);
-                }
-            }, 10000);
-        }
+        function saveGame() { set(ref(db, 'users/player1'), { resources, buildings: buildingsData }); }
 
-        function saveGame(reason) {
-            set(ref(db, 'users/player1'), { resources, buildings: buildingsData });
-            document.getElementById('save-status').innerText = `SYNCED: ${reason.toUpperCase()}`;
-        }
-
-        function loadGame() {
+        function load() {
             onValue(ref(db, 'users/player1'), (snap) => {
                 const d = snap.val();
-                if (d) {
+                if(d) {
                     resources = d.resources;
-                    updateUI();
-                    if (d.buildings) {
-                        d.buildings.forEach(b => spawnBuilding(b.tileId, b.type, false));
+                    document.getElementById('gold-val').innerText = resources.gold;
+                    if(d.buildings) {
+                        document.querySelectorAll('.building').forEach(el => el.remove());
                         buildingsData = d.buildings;
+                        d.buildings.forEach(b => spawn(b.id, b.type, false));
                     }
-                } else {
-                    spawnBuilding(820, 'townhall1', true);
-                }
+                } else { spawn(820, 'townhall1', true); }
             }, { onlyOnce: true });
         }
 
-        function updateUI() {
-            document.getElementById('gold-val').innerText = resources.gold;
-            document.getElementById('elixir-val').innerText = resources.elixir;
-            document.getElementById('gem-val').innerText = resources.gems;
-            document.getElementById('dark-elixir-val').innerText = resources.dark;
-        }
+        function updateMap() { const m = document.getElementById('map-container'); m.style.left = mapX+"px"; m.style.top = mapY+"px"; }
 
-        function setupEvents() {
-            document.getElementById('intro-overlay').onclick = function() {
-                document.getElementById('intro-audio').play();
-                this.classList.add('hidden');
-                bgMusic.src = playlist[0];
-                bgMusic.play().catch(e => console.log("Audio block"));
-            };
-            document.getElementById('shop-trigger').onclick = () => document.getElementById('shop-layer').style.display = 'flex';
-            document.getElementById('close-shop').onclick = () => document.getElementById('shop-layer').style.display = 'none';
-            
-            document.querySelectorAll('.shop-item').forEach(item => {
-                item.onclick = () => {
-                    selectedBuilding = item.dataset.type;
-                    document.getElementById('shop-layer').style.display = 'none';
-                };
-            });
-        }
-
-        function updateMapPosition() {
-            const m = document.getElementById('map-container');
-            m.style.left = mapX + "px"; m.style.top = mapY + "px";
-        }
-
-        window.onmousedown = (e) => {
-            if (e.target.closest('#shop-layer') || e.target.closest('#resource-bar') || e.target.closest('.shop-btn')) return;
-            isMouseDown = true; isDragging = false;
-            startX = e.clientX - mapX; startY = e.clientY - mapY;
+        window.onmousedown = (e) => { 
+            if(e.target.closest('#resource-bar') || e.target.closest('.bottom-right-ui')) return;
+            isMouseDown = true; isDragging = false; startX = e.clientX - mapX; startY = e.clientY - mapY; 
         };
-        window.onmousemove = (e) => {
-            if (!isMouseDown) return;
-            isDragging = true;
-            mapX = e.clientX - startX; mapY = e.clientY - startY;
-            updateMapPosition();
+        window.onmousemove = (e) => { 
+            if(!isMouseDown) return; isDragging = true; mapX = e.clientX - startX; mapY = e.clientY - startY; updateMap(); 
         };
         window.onmouseup = () => isMouseDown = false;
     </script>
