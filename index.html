@@ -25,11 +25,9 @@
             height: 100vh;
             background-color: #fff;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
-            cursor: pointer;
         }
 
         #intro-overlay.hidden {
@@ -40,20 +38,21 @@
 
         .supercell-logo {
             width: 300px;
-            display: none; /* Hidden until click */
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.5s ease-out;
         }
 
-        .start-text {
-            color: #000;
-            font-size: 24px;
-            margin-top: 20px;
+        .supercell-logo.visible {
+            opacity: 1;
+            transform: scale(1);
         }
 
         /* --- GAME WORLD --- */
         #game-canvas {
             width: 100vw;
             height: 100vh;
-            background: #4a7a2a; /* Your Grass Map */
+            background: #4a7a2a; 
             display: flex;
             justify-content: center;
             align-items: center;
@@ -114,14 +113,15 @@
         .price-bar { width: 100%; background: rgba(0,0,0,0.4); position: absolute; bottom: 0; height: 35px; display: flex; justify-content: center; align-items: center; }
     </style>
 </head>
-<body>
+<body onload="startIntro()">
 
-    <div id="intro-overlay" onclick="startSequence()">
+    <div id="intro-overlay">
         <img id="logo" src="images/supercell_logo.png" class="supercell-logo" alt="SUPERCELL">
-        <div id="click-to-start" class="start-text">TAP TO START</div>
     </div>
 
-    <audio id="intro-audio" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/audio/coc-intro.mp3?raw=true"></audio>
+    <audio id="intro-audio" preload="auto">
+        <source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg">
+    </audio>
 
     <div id="game-canvas">
         <h1>Village Map</h1>
@@ -144,20 +144,21 @@
     </div>
 
     <script>
-        function startSequence() {
+        function startIntro() {
             const overlay = document.getElementById('intro-overlay');
             const logo = document.getElementById('logo');
-            const clickText = document.getElementById('click-to-start');
             const audio = document.getElementById('intro-audio');
 
-            // 1. Hide "Tap to start" and show Logo
-            clickText.style.display = 'none';
-            logo.style.display = 'block';
+            // 1. Show Logo
+            logo.classList.add('visible');
 
             // 2. Play the Sound
-            audio.play().catch(error => console.log("Audio failed:", error));
+            audio.volume = 1.0;
+            audio.play().catch(error => {
+                console.log("Auto-play blocked by browser. This is normal if there was no interaction on the host site yet.");
+            });
 
-            // 3. Wait for the intro to finish (approx 3.5 seconds) then fade out
+            // 3. Wait 3.5 seconds then fade out
             setTimeout(() => {
                 overlay.classList.add('hidden');
             }, 3500);
