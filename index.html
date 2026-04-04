@@ -9,7 +9,7 @@
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; font-family: 'Luckiest Guy', cursive;
-            background-color: #0e3d06; 
+            background-color: #051a02;
         }
 
         /* --- INTRO SCREEN --- */
@@ -27,60 +27,66 @@
             width: 100vw; height: 100vh;
             position: relative; overflow: hidden;
             touch-action: none;
-            background: #000;
         }
 
-        /* This container holds both the background image AND the map grid */
-        #world-container {
+        /* Giant World Surface */
+        #world-surface {
             position: absolute;
-            width: 4000px; height: 4000px; /* Massive size to cover everything */
-            background-image: url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/background/background.png?raw=true');
-            background-size: cover;
-            background-position: center;
-            will-change: left, top;
+            width: 8000px; height: 8000px;
+            will-change: transform;
         }
 
+        /* --- BACKGROUND LAYERING BY SCALE --- */
+        #forest-layer {
+            position: absolute; width: 100%; height: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* Huge background2.png tiles */
+            grid-template-rows: repeat(4, 1fr);
+            z-index: 1;
+        }
+
+        .bg-forest { 
+            width: 100%; height: 100%; 
+            background-size: cover;
+            filter: brightness(0.9);
+        }
+
+        /* Dirt Path Border - Slightly bigger than grass tiles */
+        #path-border {
+            position: absolute;
+            width: 3000px; height: 3000px;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
+            display: grid;
+            grid-template-columns: repeat(20, 1fr); /* background.png tiles */
+            z-index: 2;
+        }
+
+        .bg-path { width: 100%; height: 100%; background-size: cover; }
+
+        /* --- CENTRAL VILLAGE GRID --- */
         #map-container {
             position: absolute;
             width: 2400px; height: 2400px; 
             left: 50%; top: 50%;
             transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
+            z-index: 5;
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
         }
 
         .grid-layer {
             position: absolute; width: 100%; height: 100%;
             display: grid;
-            grid-template-columns: repeat(40, 1fr); 
-            grid-template-rows: repeat(40, 1fr);
+            grid-template-columns: repeat(40, 1fr); /* Tiny grass/background1.png tiles */
         }
 
-        .tile {
-            width: 100%; height: 100%;
-            background-size: cover;
-            margin: -0.2px; 
-        }
+        .tile { width: 100%; height: 100%; background-size: cover; margin: -0.1px; }
+        .tile:hover { filter: brightness(1.4); cursor: pointer; }
 
-        .tile:hover {
-            filter: brightness(1.2);
-            cursor: pointer;
-        }
-
-        /* --- UI --- */
-        .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 10; }
-        .shop-btn { width: 120px; cursor: pointer; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); transition: transform 0.1s; }
-        .shop-btn:active { transform: scale(0.9); }
-
-        #shop-layer {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7); z-index: 100;
-            justify-content: center; align-items: center;
-        }
-        .shop-container {
-            width: 95vw; height: 90vh; background: #d3d7c6; border: 4px solid #1a1a1a;
-            border-radius: 12px; display: flex; flex-direction: column; position: relative;
-        }
-        .close-btn { position: absolute; top: 5px; right: 10px; background: #ff3131; border: 3px solid #000; border-radius: 5px; padding: 5px 12px; cursor: pointer; color: white; }
+        /* UI */
+        .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 100; }
+        .shop-btn { width: 120px; cursor: pointer; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); }
     </style>
 </head>
 <body onload="startIntroSequence()">
@@ -90,13 +96,12 @@
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
     </div>
 
-    <audio id="intro-audio" preload="auto">
-        <source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="bg-music" preload="auto"></audio>
-
     <div id="game-viewport">
-        <div id="world-container">
+        <div id="world-surface">
+            <div id="forest-layer"></div>
+            
+            <div id="path-border"></div>
+
             <div id="map-container">
                 <div id="grid-layer" class="grid-layer"></div>
             </div>
@@ -104,106 +109,76 @@
     </div>
 
     <div class="bottom-right-ui">
-        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" class="shop-btn" onclick="toggleShop(true)">
-    </div>
-
-    <div id="shop-layer">
-        <div class="shop-container">
-            <div class="close-btn" onclick="toggleShop(false)">X</div>
-            <p style="text-align:center; color:black; font-size: 30px;">SHOP</p>
-        </div>
+        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" class="shop-btn">
     </div>
 
     <script>
-        // --- GRID GENERATION ---
-        const gridSize = 40; 
-        const totalTiles = gridSize * gridSize;
+        const rawBase = 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/';
+
+        // 1. Generate Huge Forest (background2.png)
+        const forestLayer = document.getElementById('forest-layer');
+        for (let i = 0; i < 16; i++) {
+            const t = document.createElement('div');
+            t.className = 'bg-forest';
+            t.style.backgroundImage = `url('${rawBase}background/background2.png?raw=true')`;
+            forestLayer.appendChild(t);
+        }
+
+        // 2. Generate Dirt Path Border (background.png)
+        const pathBorder = document.getElementById('path-border');
+        for (let i = 0; i < 400; i++) {
+            const t = document.createElement('div');
+            t.className = 'bg-path';
+            t.style.backgroundImage = `url('${rawBase}background/background.png?raw=true')`;
+            pathBorder.appendChild(t);
+        }
+
+        // 3. Generate Small Village Tiles (Grass + background1.png filler)
         const gridLayer = document.getElementById('grid-layer');
-        const images = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
-        
-        let tilePool = [];
-        for (let i = 0; i < totalTiles; i++) tilePool.push(images[i % images.length]);
-
-        for (let i = tilePool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [tilePool[i], tilePool[j]] = [tilePool[j], tilePool[i]];
+        const smallAssets = ['grid/grass.png', 'background/background1.png'];
+        for (let i = 0; i < 1600; i++) {
+            const t = document.createElement('div');
+            t.className = 'tile';
+            const img = smallAssets[Math.random() > 0.9 ? 1 : 0]; // Mostly grass, some background1 filler
+            t.style.backgroundImage = `url('${rawBase}${img}${img.includes('grass') ? '' : '?raw=true'}')`;
+            gridLayer.appendChild(t);
         }
 
-        const placedTiles = [];
-        for (let i = 0; i < totalTiles; i++) {
-            const tile = document.createElement('div');
-            tile.className = 'tile';
-            const leftN = (i % gridSize !== 0) ? placedTiles[i - 1] : null;
-            const topN = (i >= gridSize) ? placedTiles[i - gridSize] : null;
-
-            let foundIdx = 0;
-            for (let j = 0; j < tilePool.length; j++) {
-                if (tilePool[j] !== leftN && tilePool[j] !== topN) {
-                    foundIdx = j; break;
-                }
-            }
-
-            const selectedImg = tilePool[foundIdx];
-            tile.style.backgroundImage = `url('${selectedImg}')`;
-            placedTiles.push(selectedImg);
-            tilePool.splice(foundIdx, 1);
-            gridLayer.appendChild(tile);
-        }
-
-        // --- CAMERA PANNING (NOW MOVES THE WORLD CONTAINER) ---
-        const viewport = document.getElementById('game-viewport');
-        const world = document.getElementById('world-container');
-        let isMouseDown = false;
-        let isDragging = false; 
+        // --- CAMERA PANNING ---
+        const world = document.getElementById('world-surface');
+        let isPanning = false;
         let startX, startY;
-        let worldX = (window.innerWidth / 2) - 2000;
-        let worldY = (window.innerHeight / 2) - 2000;
+        let currentX = (window.innerWidth / 2) - 4000;
+        let currentY = (window.innerHeight / 2) - 4000;
 
-        world.style.left = worldX + "px";
-        world.style.top = worldY + "px";
+        world.style.left = currentX + "px";
+        world.style.top = currentY + "px";
 
-        viewport.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            isDragging = false;
-            startX = e.clientX - worldX;
-            startY = e.clientY - worldY;
+        document.getElementById('game-viewport').addEventListener('mousedown', (e) => {
+            isPanning = true;
+            startX = e.clientX - currentX;
+            startY = e.clientY - currentY;
         });
 
         window.addEventListener('mousemove', (e) => {
-            if (!isMouseDown) return;
-            isDragging = true;
-            worldX = e.clientX - startX;
-            worldY = e.clientY - startY;
-            world.style.left = worldX + "px";
-            world.style.top = worldY + "px";
+            if (!isPanning) return;
+            currentX = e.clientX - startX;
+            currentY = e.clientY - startY;
+            world.style.left = currentX + "px";
+            world.style.top = currentY + "px";
         });
 
-        window.addEventListener('mouseup', () => {
-            isMouseDown = false;
-        });
-
-        // --- INTRO & MUSIC ---
-        const playlist = [
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
-        ];
-        let currentTrack = 0;
-        const bgMusic = document.getElementById('bg-music');
+        window.addEventListener('mouseup', () => isPanning = false);
 
         function startIntroSequence() {
-            document.getElementById('intro-audio').play().catch(e => {});
             setTimeout(() => {
                 document.getElementById('intro-0').classList.remove('active');
                 document.getElementById('intro-1').classList.add('active');
                 setTimeout(() => {
                     document.getElementById('intro-overlay').classList.add('hidden');
-                    bgMusic.src = playlist[0];
-                    bgMusic.play().catch(e => {});
-                }, 3000);
+                }, 2000);
             }, 2000);
         }
-
-        function toggleShop(show) { document.getElementById('shop-layer').style.display = show ? 'flex' : 'none'; }
     </script>
 </body>
 </html>
