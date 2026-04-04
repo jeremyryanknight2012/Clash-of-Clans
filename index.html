@@ -1,136 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clash Remake - Isometric</title>
-    <style>
-        body { 
-            margin: 0; 
-            background: #1a2e11; 
-            overflow: hidden; 
-            height: 100vh;
-            width: 100vw;
-            cursor: grab;
-            user-select: none;
-        }
-
-        body:active {
-            cursor: grabbing;
-        }
-
-        /* The Map */
-        #map-container {
-            width: 4000px; /* Large map for scrolling */
-            height: 4000px;
-            background-color: #4e7d34;
-            background-image: 
-                linear-gradient(rgba(255,255,255,.05) 2px, transparent 2px),
-                linear-gradient(90deg, rgba(255,255,255,.05) 2px, transparent 2px);
-            background-size: 50px 50px;
-            
-            /* Isometric Transformation */
-            transform: rotateX(60deg) rotateZ(45deg);
-            transform-style: preserve-3d;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        /* UI Layer - Stays fixed to screen */
-        #ui-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        #shop-button {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 120px;
-            cursor: pointer;
-            pointer-events: auto;
-            transition: transform 0.1s;
-        }
-
-        #shop-button:active {
-            transform: scale(0.9);
-        }
-
-        /* Placeholder Building */
-        .building {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            background: #8b4513;
-            border: 2px solid #5d3e21;
-            transform: rotateZ(-45deg) rotateX(-60deg) translateY(-50px);
-            transform-origin: bottom;
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
 </head>
 <body>
-
-    <div id="map-container">
-        <div class="building" style="top: 2000px; left: 2000px;"></div>
-    </div>
-
-    <div id="ui-layer">
-        <a href="shop/shop.html">
-            <img id="shop-button" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" alt="Shop">
-        </a>
-    </div>
-
     <script>
-        const scrollContainer = document.documentElement;
-        let isDragging = false;
-        let startX, startY, scrollLeft, scrollTop;
-
-        // Center the camera on load
-        window.onload = () => {
-            window.scrollTo(
-                (4000 - window.innerWidth) / 2,
-                (4000 - window.innerHeight) / 2
-            );
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
         };
 
-        window.addEventListener('mousedown', (e) => {
-            // Only drag if we aren't clicking the shop button
-            if (e.target.id === 'shop-button') return;
+        const game = new Phaser.Game(config);
 
-            isDragging = true;
-            startX = e.pageX - scrollContainer.offsetLeft;
-            startY = e.pageY - scrollContainer.offsetTop;
-            scrollLeft = window.scrollX;
-            scrollTop = window.scrollY;
-        });
+        function preload() {
+            // 1. Load your assets here
+            this.load.image('map', 'assets/grass_bg.png');
+            this.load.image('cannon', 'assets/cannon.png');
+        }
 
-        window.addEventListener('mouseleave', () => {
-            isDragging = false;
-        });
-
-        window.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
+        function create() {
+            // 2. Place things on the screen
+            this.add.image(400, 300, 'map');
             
-            const x = e.pageX - scrollContainer.offsetLeft;
-            const y = e.pageY - scrollContainer.offsetTop;
+            // Create a building that can be clicked
+            let cannon = this.add.sprite(400, 300, 'cannon').setInteractive();
             
-            // Speed multiplier (1.5) makes the panning feel more responsive
-            const walkX = (x - startX) * 1.5;
-            const walkY = (y - startY) * 1.5;
-            
-            window.scrollTo(scrollLeft - walkX, scrollTop - walkY);
-        });
+            cannon.on('pointerdown', () => {
+                console.log("You clicked the cannon!");
+                // Here is where you would open your Shop UI
+            });
+        }
+
+        function update() {
+            // 3. This runs 60 times a second (for animations/input)
+        }
     </script>
 </body>
 </html>
