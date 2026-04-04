@@ -24,11 +24,7 @@
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; display: flex; justify-content: center;
             align-items: center; z-index: 9999;
-            transition: opacity 0.8s ease-out;
-        }
-        #intro-overlay.hidden { 
-            opacity: 0; 
-            pointer-events: none; /* THIS FIXES THE CLICKING ISSUE */
+            transition: opacity 1s ease-out;
         }
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
@@ -37,15 +33,15 @@
         #game-viewport {
             width: 100vw; height: 100vh;
             position: relative; overflow: hidden;
-            cursor: grab;
+            cursor: default;
         }
-        #game-viewport:active { cursor: grabbing; }
 
         #map-container {
             position: absolute;
             width: 2400px; height: 2400px; 
             transform: rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
+            pointer-events: auto;
         }
 
         .grid-layer {
@@ -60,21 +56,20 @@
             background-size: cover;
             position: relative;
             transform-style: preserve-3d;
+            pointer-events: auto;
         }
 
         /* --- THE BUILDING --- */
         .building {
             position: absolute;
-            bottom: 15%; 
-            left: 50%;
+            bottom: 15%; left: 50%;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: bottom center;
-            /* Stands the PNG up vertically */
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
             transform-origin: bottom center;
-            pointer-events: auto;
             z-index: 100;
+            pointer-events: none; /* Let clicks pass to the tile below */
             filter: drop-shadow(5px 10px 5px rgba(0,0,0,0.4));
         }
 
@@ -84,8 +79,7 @@
 
         /* --- UI --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
-        .shop-btn { width: 120px; cursor: pointer; transition: transform 0.1s; }
-        .shop-btn:active { transform: scale(0.9); }
+        .shop-btn { width: 120px; cursor: pointer; }
 
         #shop-layer {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -135,6 +129,8 @@
         let isDragging = false;
         let selectedType = null;
         let mDown = false;
+        let startX, startY;
+        let mapX = (window.innerWidth/2)-1200, mapY = (window.innerHeight/2)-800;
 
         function initVillage() {
             const grid = document.getElementById('grid-layer');
@@ -146,17 +142,17 @@
                 tile.id = `tile-${i}`;
                 tile.style.backgroundImage = `url('${grass[Math.floor(Math.random()*grass.length)]}')`;
                 
-                tile.onclick = (e) => {
-                    if (isDragging) return;
+                tile.addEventListener('click', (e) => {
+                    if (isDragging) return; // Ignore clicks if the mouse moved (dragged)
                     if (selectedType) {
                         spawnBuilding(i, selectedType, '3x3'); 
                         selectedType = null;
+                        document.getElementById('game-viewport').style.cursor = 'default';
                     }
-                };
+                });
                 grid.appendChild(tile);
             }
 
-            // --- SPAWN STARTING BUILDINGS ---
             spawnBuilding(820, 'townhall', '4x4', 1);
             spawnBuilding(738, 'builder_hut', '2x2');
             spawnBuilding(743, 'gold_mine', '2x2');
@@ -168,51 +164,51 @@
 
             const b = document.createElement('div');
             b.className = `building size-${sizeClass}`;
-            
             const img = (type === 'townhall') ? `${type}${level || 1}.png` : `${type}.png`;
             b.style.backgroundImage = `url('shop/${img}')`;
-
-            b.onclick = (e) => {
-                e.stopPropagation();
-                if (type === 'townhall') upgradeTownHall(b, level || 1);
-            };
-
             tile.appendChild(b);
         }
 
-        function upgradeTownHall(el, currentLv) {
-            if (currentLv >= 18) return;
-            if (confirm("Upgrade Town Hall?")) {
-                const newLv = currentLv + 1;
-                el.style.backgroundImage = `url('shop/townhall${newLv}.png')`;
-                el.onclick = (e) => { e.stopPropagation(); upgradeTownHall(el, newLv); };
-            }
-        }
-
-        // --- CAMERA PANNING ---
+        // --- CAMERA PANNING LOGIC ---
+        const viewport = document.getElementById('game-viewport');
         const map = document.getElementById('map-container');
-        let startX, startY;
-        let mapX = (window.innerWidth/2)-1200, mapY = (window.innerHeight/2)-800;
-        map.style.left = mapX+"px"; map.style.top = mapY+"px";
+        map.style.left = mapX + "px"; map.style.top = mapY + "px";
 
-        window.onmousedown = (e) => { 
-            mDown = true; 
-            isDragging = false; 
-            startX = e.clientX-mapX; 
-            startY = e.clientY-mapY; 
-        };
-        window.onmousemove = (e) => { 
-            if(!mDown) return; 
-            isDragging = true; 
-            mapX = e.clientX-startX; 
-            mapY = e.clientY-startY;
-            map.style.left = mapX+"px"; 
-            map.style.top = mapY+"px";
-        };
-        window.onmouseup = () => mDown = false;
+        viewport.addEventListener('mousedown', (e) => {
+            mDown = true;
+            isDragging = false;
+            startX = e.clientX - mapX;
+            startY = e.clientY - mapY;
+            viewport.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!mDown) return;
+            
+            // Calculate movement distance
+            let moveX = e.clientX - startX;
+            let moveY = e.clientY - startY;
+            
+            // If mouse moves more than 5px, it's a drag, not a click
+            if (Math.abs(moveX - mapX) > 5 || Math.abs(moveY - mapY) > 5) {
+                isDragging = true;
+            }
+
+            mapX = moveX;
+            mapY = moveY;
+            map.style.left = mapX + "px";
+            map.style.top = mapY + "px";
+        });
+
+        window.addEventListener('mouseup', () => {
+            mDown = false;
+            viewport.style.cursor = (selectedType) ? 'crosshair' : 'default';
+        });
 
         function startIntro() {
+            const overlay = document.getElementById('intro-overlay');
             const audio = document.getElementById('intro-audio');
+            
             audio.play().catch(() => {
                 window.addEventListener('mousedown', () => audio.play(), {once: true});
             });
@@ -221,13 +217,18 @@
                 document.getElementById('intro-0').classList.remove('active');
                 document.getElementById('intro-1').classList.add('active');
                 setTimeout(() => {
-                    document.getElementById('intro-overlay').classList.add('hidden');
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.remove(), 1000); // DELETE FROM DOM
                 }, 2000);
             }, 2000);
         }
 
         function toggleShop(s) { document.getElementById('shop-layer').style.display = s ? 'flex' : 'none'; }
-        function selectBuilding(t) { selectedType = t; toggleShop(false); }
+        function selectBuilding(t) { 
+            selectedType = t; 
+            toggleShop(false); 
+            document.getElementById('game-viewport').style.cursor = 'crosshair';
+        }
     </script>
 </body>
 </html>
