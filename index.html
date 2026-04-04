@@ -38,20 +38,23 @@
         #game-viewport { 
             width: 100vw; height: 100vh; 
             position: relative; overflow: hidden; 
-            cursor: default; /* Regular cursor by default */
+            perspective: 2000px; /* Crucial for that 3D depth */
         }
         
         #world-surface {
             position: absolute; 
-            width: 4000px; height: 4000px;
+            width: 5000px; height: 5000px;
             will-change: transform;
+            pointer-events: none; 
         }
 
         #map-container {
             position: absolute; width: 2400px; height: 2400px; 
             left: 50%; top: 50%;
+            /* Restored the aggressive 3D tilt */
             transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
+            pointer-events: auto; 
         }
 
         .grid-layer {
@@ -62,13 +65,15 @@
         .tile { 
             width: 100%; height: 100%; position: relative; 
             transform-style: preserve-3d; background-size: cover; 
-            cursor: pointer; /* Finger pointer for tiles */
+            cursor: pointer;
+            margin: -0.1px; /* Prevents tiny gaps between tiles */
         }
         .tile:hover { filter: brightness(1.2); }
 
         /* --- BUILDINGS --- */
         .building-wrapper {
             position: absolute; bottom: 15%; left: 50%; 
+            /* Rotates buildings to stand upright relative to the tilted map */
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
             transform-origin: bottom center; z-index: 10;
             display: flex; flex-direction: column; align-items: center;
@@ -83,7 +88,6 @@
             border: 2px solid #000; pointer-events: none; display: none;
         }
 
-        .size-1x1 { width: 40px; height: 60px; }
         .size-2x2 { width: 80px; height: 120px; }
         .size-4x4 { width: 160px; height: 240px; }
 
@@ -164,24 +168,28 @@
         const viewport = document.getElementById('game-viewport');
         let isPanning = false;
         let panStartX, panStartY;
-        let currentX = (window.innerWidth / 2) - 2000;
-        let currentY = (window.innerHeight / 2) - 2000;
+        let currentX = (window.innerWidth / 2) - 2500;
+        let currentY = (window.innerHeight / 2) - 2500;
         let dragActive = false;
 
-        // --- GRID ---
         function setupGrid() {
             const gridLayer = document.getElementById('grid-layer');
-            const grass = [
+            const grassUrls = [
                 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass.png?raw=true',
                 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass1.png?raw=true',
-                'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass2.png?raw=true'
+                'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass2.png?raw=true',
+                'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass3.png?raw=true',
+                'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass4.png?raw=true'
             ];
             
             for (let i = 0; i < 1600; i++) {
                 const tile = document.createElement('div');
                 tile.className = 'tile';
                 tile.id = `tile-${i}`;
-                tile.style.backgroundImage = `url('${grass[i % 3]}')`;
+                
+                // RESTORED: Random grass for organic look
+                const randomImg = grassUrls[Math.floor(Math.random() * grassUrls.length)];
+                tile.style.backgroundImage = `url('${randomImg}')`;
                 
                 tile.onclick = (e) => {
                     if (dragActive) return;
@@ -195,7 +203,7 @@
             updateWorldPos();
         }
 
-        // --- CAMERA ---
+        // --- CAMERA PANNING ---
         viewport.onmousedown = (e) => {
             if(e.target.closest('.shop-btn') || e.target.closest('#shop-layer')) return;
             isPanning = true;
@@ -285,7 +293,6 @@
             document.getElementById('elixir-val').innerText = resources.elixir;
         }
 
-        // --- DATA & SHOP ---
         function saveGame() { set(ref(db, 'users/player1'), { resources, buildings: buildingsData }); }
 
         function loadGame() {
