@@ -25,9 +25,19 @@
         /* --- GAME WORLD --- */
         #game-viewport {
             width: 100vw; height: 100vh;
-            overflow: auto; 
-            display: flex; justify-content: center; align-items: center;
+            overflow: auto; /* Allows panning */
             background: #1b4d0a;
+            display: block; /* Changed from flex to allow scrolling to work properly */
+        }
+
+        /* This wrapper ensures the scrollable area is huge so the map doesn't hit edges */
+        #scroll-canvas {
+            width: 5000px; 
+            height: 5000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
 
         #map-container {
@@ -36,7 +46,7 @@
             transform: rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
             box-shadow: 0 0 100px rgba(0,0,0,0.5);
-            margin-top: -400px; 
+            /* Removed negative margin - we handle positioning with the scroll-canvas now */
         }
 
         .grid-layer {
@@ -129,8 +139,10 @@
     <audio id="bg-music" preload="auto"></audio>
 
     <div id="game-viewport">
-        <div id="map-container">
-            <div id="grid-layer" class="grid-layer"></div>
+        <div id="scroll-canvas">
+            <div id="map-container">
+                <div id="grid-layer" class="grid-layer"></div>
+            </div>
         </div>
     </div>
 
@@ -160,7 +172,6 @@
         const gridSize = 40; 
         const totalTiles = gridSize * gridSize;
         const gridLayer = document.getElementById('grid-layer');
-        // MATCHING YOUR FILE NAMES: grass, grass1, grass2, grass3, grass4
         const images = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
         
         let tilePool = [];
@@ -195,6 +206,14 @@
             gridLayer.appendChild(tile);
         }
 
+        // Center the view on the map
+        function centerMap() {
+            const viewport = document.getElementById('game-viewport');
+            const canvas = document.getElementById('scroll-canvas');
+            viewport.scrollLeft = (canvas.offsetWidth - viewport.offsetWidth) / 2;
+            viewport.scrollTop = (canvas.offsetHeight - viewport.offsetHeight) / 2;
+        }
+
         // --- PLACEMENT LOGIC ---
         const ghost = document.getElementById('ghost-building');
         function selectBuilding(imgSrc) {
@@ -210,14 +229,13 @@
             }
         });
 
-        // Click anywhere to "place" (for now just hides the ghost)
         document.addEventListener('mousedown', () => {
             if (ghost.style.display === 'block') {
                 ghost.style.display = 'none';
             }
         });
 
-        // --- MUSIC PLAYLIST ---
+        // --- MUSIC ---
         const playlist = [
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
@@ -233,10 +251,13 @@
         }
         bgMusic.onended = playNextTrack;
 
-        // --- INTRO & UI LOGIC ---
+        // --- INTRO SEQUENCE ---
         function startIntroSequence() {
             const introAudio = document.getElementById('intro-audio');
             introAudio.play().catch(e => {});
+
+            // Initialize position
+            centerMap();
 
             setTimeout(() => {
                 document.getElementById('intro-0').classList.remove('active');
