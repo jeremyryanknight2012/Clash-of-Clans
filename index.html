@@ -41,7 +41,7 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            display: none; /* Hidden by default */
+            display: none;
         }
 
         .intro-img.active {
@@ -123,6 +123,8 @@
     <audio id="intro-audio" preload="auto">
         <source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg">
     </audio>
+    
+    <audio id="bg-music" preload="auto"></audio>
 
     <div id="game-canvas">
         <h1>Village Map</h1>
@@ -149,28 +151,51 @@
     </div>
 
     <script>
+        // Playlist Configuration
+        const playlist = [
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3", // Part 1 again as requested
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
+        ];
+        
+        let currentTrack = 0;
+        const bgMusic = document.getElementById('bg-music');
+
         function startIntroSequence() {
             const overlay = document.getElementById('intro-overlay');
             const intro0 = document.getElementById('intro-0');
             const intro1 = document.getElementById('intro-1');
-            const audio = document.getElementById('intro-audio');
+            const introAudio = document.getElementById('intro-audio');
 
-            // 1. Play the Sound
-            audio.volume = 1.0;
-            audio.play().catch(e => console.log("Audio waiting for site launch interaction."));
+            introAudio.volume = 1.0;
+            introAudio.play().catch(e => console.log("Audio waiting for interaction."));
 
-            // 2. Show first screen (Supercell) for 2 seconds
+            // Stage 1 to Stage 2 transition
             setTimeout(() => {
                 intro0.classList.remove('active');
                 intro1.classList.add('active');
 
-                // 3. Show second screen (Loading) for 3 more seconds
+                // Finish Intro and Start Background Music
                 setTimeout(() => {
                     overlay.classList.add('hidden');
+                    playNextTrack(); // Start the loop
                 }, 3000);
 
             }, 2000);
         }
+
+        function playNextTrack() {
+            bgMusic.src = playlist[currentTrack];
+            bgMusic.play().catch(e => console.log("BG Music waiting for interaction."));
+            
+            // Prepare for next song
+            currentTrack = (currentTrack + 1) % playlist.length;
+        }
+
+        // When a song ends, play the next one automatically
+        bgMusic.onended = function() {
+            playNextTrack();
+        };
 
         function toggleShop(show) {
             document.getElementById('shop-layer').style.display = show ? 'flex' : 'none';
