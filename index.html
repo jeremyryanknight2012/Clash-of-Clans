@@ -196,6 +196,7 @@
             initGrid();
             loadGame(); 
             setupEvents();
+            // --- AUTOSAVE TIMER ---
             setInterval(() => saveGame("Periodic Autosave"), 30000);
         };
 
@@ -223,8 +224,7 @@
             const tile = document.getElementById(`tile-${tileId}`);
             if (!tile || tile.querySelector('.building')) return;
 
-            // Determine Size
-            let sizeClass = 'size-2x2'; // Default
+            let sizeClass = 'size-2x2';
             if (type === 'townhall1') sizeClass = 'size-4x4';
             if (type.includes('storage')) sizeClass = 'size-3x3';
             if (type === 'builder_hut') sizeClass = 'size-1x1';
@@ -277,8 +277,9 @@
                     resources = d.resources;
                     updateUI();
                     if (d.buildings) {
-                        d.buildings.forEach(b => spawnBuilding(b.tileId, b.type, false));
+                        document.querySelectorAll('.building').forEach(b => b.remove()); // Clear default before load
                         buildingsData = d.buildings;
+                        d.buildings.forEach(b => spawnBuilding(b.tileId, b.type, false));
                     }
                 } else {
                     spawnBuilding(820, 'townhall1', true);
