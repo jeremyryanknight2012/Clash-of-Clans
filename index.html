@@ -11,7 +11,6 @@
             overflow: hidden; font-family: 'Luckiest Guy', cursive;
             background-color: #0e3d06;
             user-select: none;
-            /* Force the cursor to stay default globally */
             cursor: default !important;
         }
 
@@ -27,8 +26,8 @@
             background-color: #000; display: flex; justify-content: center;
             align-items: center; z-index: 9999;
             transition: opacity 1s;
+            pointer-events: none; /* Let the intro play without blocking initial load */
         }
-
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
@@ -57,6 +56,7 @@
             background-size: cover;
             position: relative;
             transform-style: preserve-3d;
+            pointer-events: auto !important; /* FORCED CLICKABILITY */
         }
 
         .building {
@@ -130,6 +130,10 @@
         let startX, startY;
         let mapX = (window.innerWidth/2)-1200;
         let mapY = (window.innerHeight/2)-800;
+        
+        // Track mouse movement to separate click from drag
+        let dragThreshold = 5;
+        let mouseMoved = false;
 
         const viewport = document.getElementById('game-viewport');
         const map = document.getElementById('map-container');
@@ -144,20 +148,22 @@
                 tile.id = `tile-${i}`;
                 tile.dataset.index = i;
                 tile.style.backgroundImage = `url('${grass[Math.floor(Math.random()*grass.length)]}')`;
+                
+                // Add click directly to tiles
+                tile.addEventListener('click', function(e) {
+                    if (mouseMoved) return; // Don't build if we were dragging
+                    
+                    if (selectedType) {
+                        spawnBuilding(this.dataset.index, selectedType, '3x3');
+                        selectedType = null;
+                        document.body.style.cursor = 'default';
+                    }
+                });
+                
                 gridLayer.appendChild(tile);
             }
 
-            // Click listener
-            gridLayer.addEventListener('mouseup', (e) => {
-                if (isDragging) return; 
-                const tile = e.target.closest('.tile');
-                if (tile && selectedType) {
-                    spawnBuilding(tile.dataset.index, selectedType, '3x3'); 
-                    selectedType = null;
-                    document.body.style.cursor = 'default';
-                }
-            });
-
+            // Spawn static starters
             spawnBuilding(820, 'townhall', '4x4', 1);
             spawnBuilding(738, 'builder_hut', '2x2');
             spawnBuilding(743, 'gold_mine', '2x2');
@@ -179,35 +185,33 @@
         map.style.top = mapY + "px";
 
         window.addEventListener('mousedown', (e) => {
-            if (e.target.closest('#map-container')) {
-                mDown = true;
-                isDragging = false;
-                startX = e.clientX - mapX;
-                startY = e.clientY - mapY;
-                // Keep cursor default
-                document.body.style.cursor = (selectedType) ? 'crosshair' : 'default';
-            }
+            mDown = true;
+            mouseMoved = false;
+            startX = e.clientX - mapX;
+            startY = e.clientY - mapY;
         });
 
         window.addEventListener('mousemove', (e) => {
             if (!mDown) return;
             
-            let moveX = e.clientX - startX;
-            let moveY = e.clientY - startY;
-            
-            if (Math.abs(moveX - mapX) > 3 || Math.abs(moveY - mapY) > 3) {
+            let newX = e.clientX - startX;
+            let newY = e.clientY - startY;
+
+            // If the mouse moves beyond threshold, mark as drag
+            if (Math.abs(newX - mapX) > dragThreshold || Math.abs(newY - mapY) > dragThreshold) {
+                mouseMoved = true;
                 isDragging = true;
             }
 
-            mapX = moveX;
-            mapY = moveY;
+            mapX = newX;
+            mapY = newY;
             map.style.left = mapX + "px";
             map.style.top = mapY + "px";
         });
 
         window.addEventListener('mouseup', () => {
             mDown = false;
-            document.body.style.cursor = (selectedType) ? 'crosshair' : 'default';
+            setTimeout(() => { isDragging = false; }, 10); // Short delay to prevent click firing
         });
 
         function startIntro() {
@@ -229,6 +233,7 @@
         }
 
         function toggleShop(s) { document.getElementById('shop-layer').style.display = s ? 'flex' : 'none'; }
+        
         function selectBuilding(t) { 
             selectedType = t; 
             toggleShop(false); 
