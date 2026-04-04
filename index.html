@@ -18,7 +18,6 @@
             background-size: cover; background-position: center; z-index: -1; 
         }
 
-        /* --- TOP RESOURCE BAR --- */
         #resource-bar {
             position: fixed; top: 10px; right: 10px; display: flex; flex-direction: column; 
             gap: 8px; z-index: 1000; align-items: flex-end;
@@ -30,17 +29,14 @@
         }
         .res-icon { width: 35px; height: 35px; margin-left: 10px; }
 
-        /* --- INTRO SCREEN --- */
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #000; display: flex; justify-content: center;
-            align-items: center; z-index: 9999; cursor: pointer;
+            background-color: #000; z-index: 9999; cursor: pointer;
         }
-        #intro-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.8s ease-out; }
+        #intro-overlay.hidden { display: none; }
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
-        /* --- GAME ENGINE --- */
         #game-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         #map-container {
             position: absolute; width: 2400px; height: 2400px; 
@@ -52,30 +48,17 @@
         }
         .tile { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; }
 
-        /* --- BUILDINGS --- */
         .building {
             position: absolute; bottom: 10%; left: 50%; 
             background-size: contain; background-repeat: no-repeat; background-position: bottom center;
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
             transform-origin: bottom center; z-index: 10; pointer-events: none;
         }
-        /* Size Classes */
         .size-1x1 { width: 100%; height: 150%; }
         .size-2x2 { width: 200%; height: 300%; }
         .size-3x3 { width: 300%; height: 450%; }
         .size-4x4 { width: 400%; height: 600%; }
 
-        .collect-bubble {
-            position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
-            width: 50px; height: 50px; background: white; border: 3px solid #333;
-            border-radius: 50%; z-index: 20; cursor: pointer; pointer-events: auto;
-            display: flex; justify-content: center; align-items: center;
-            animation: bounce 2s infinite ease-in-out;
-        }
-        .collect-bubble img { width: 70%; }
-        @keyframes bounce { 0%, 100% { top: -60px; } 50% { top: -75px; } }
-
-        /* --- SHOP UI --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .shop-btn { width: 120px; cursor: pointer; }
         #shop-layer {
@@ -94,7 +77,6 @@
             cursor: pointer; text-align: center; color: black; background: rgba(255,255,255,0.3);
             padding: 10px; border-radius: 8px; border: 2px solid #000; width: 100px;
         }
-        .shop-item:hover { background: rgba(255,255,255,0.6); }
 
         #save-status {
             position: fixed; bottom: 10px; left: 10px; color: rgba(255,255,255,0.5);
@@ -116,7 +98,6 @@
     <div id="intro-overlay">
         <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
-        <p style="color:white; position:absolute; bottom:15%;">CLICK TO START</p>
     </div>
 
     <audio id="bg-music"></audio>
@@ -189,15 +170,25 @@
         const bgMusic = document.getElementById('bg-music');
         const playlist = [
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3",
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3" // Fallback 3rd track
         ];
+        let currentTrack = 0;
 
         window.onload = () => {
             initGrid();
             loadGame(); 
             setupEvents();
-            // --- AUTOSAVE TIMER ---
-            setInterval(() => saveGame("Periodic Autosave"), 30000);
+            setInterval(() => saveGame("Autosave"), 30000);
+            
+            // Resource production: 1 every 3 seconds
+            setInterval(() => {
+                buildingsData.forEach(b => {
+                    if (b.type === 'gold_mine') resources.gold += 1;
+                    if (b.type === 'elixir_collector') resources.elixir += 1;
+                });
+                updateUI();
+            }, 3000);
         };
 
         function initGrid() {
@@ -228,41 +219,16 @@
             if (type === 'townhall1') sizeClass = 'size-4x4';
             if (type.includes('storage')) sizeClass = 'size-3x3';
             if (type === 'builder_hut') sizeClass = 'size-1x1';
-            if (type === 'cannon') sizeClass = 'size-2x2';
 
             const b = document.createElement('div');
             b.className = `building ${sizeClass}`;
             b.style.backgroundImage = `url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${type}.png?raw=true')`;
             tile.appendChild(b);
 
-            if (type === 'gold_mine' || type === 'elixir_collector') {
-                setupCollector(tile, type);
-            }
-
             if (shouldSave) {
                 buildingsData.push({ tileId, type });
-                saveGame("Building Placed");
+                saveGame("Placed " + type);
             }
-        }
-
-        function setupCollector(tile, type) {
-            const resType = type.includes('gold') ? 'gold' : 'elixir';
-            const icon = resType === 'gold' ? 'coin' : 'elixir';
-            setInterval(() => {
-                if (!tile.querySelector('.collect-bubble')) {
-                    const bubble = document.createElement('div');
-                    bubble.className = 'collect-bubble';
-                    bubble.innerHTML = `<img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/${icon}.png?raw=true">`;
-                    bubble.onclick = (e) => {
-                        e.stopPropagation();
-                        resources[resType] += 50;
-                        updateUI();
-                        saveGame("Collected Resources");
-                        bubble.remove();
-                    };
-                    tile.appendChild(bubble);
-                }
-            }, 15000);
         }
 
         function saveGame(reason) {
@@ -277,7 +243,7 @@
                     resources = d.resources;
                     updateUI();
                     if (d.buildings) {
-                        document.querySelectorAll('.building').forEach(b => b.remove()); // Clear default before load
+                        document.querySelectorAll('.building').forEach(b => b.remove());
                         buildingsData = d.buildings;
                         d.buildings.forEach(b => spawnBuilding(b.tileId, b.type, false));
                     }
@@ -294,13 +260,32 @@
             document.getElementById('dark-elixir-val').innerText = resources.dark;
         }
 
+        function playNextTrack() {
+            bgMusic.src = playlist[currentTrack];
+            bgMusic.play().catch(() => {});
+            currentTrack = (currentTrack + 1) % playlist.length;
+        }
+
         function setupEvents() {
-            document.getElementById('intro-overlay').onclick = function() {
-                document.getElementById('intro-audio').play();
-                this.classList.add('hidden');
-                bgMusic.src = playlist[0];
-                bgMusic.play();
+            const overlay = document.getElementById('intro-overlay');
+            const intro0 = document.getElementById('intro-0');
+            const intro1 = document.getElementById('intro-1');
+
+            overlay.onclick = function() {
+                if (intro0.classList.contains('active')) {
+                    // Switch to second intro
+                    intro0.classList.remove('active');
+                    intro1.classList.add('active');
+                } else {
+                    // Start Game
+                    document.getElementById('intro-audio').play();
+                    overlay.classList.add('hidden');
+                    playNextTrack();
+                }
             };
+
+            bgMusic.onended = playNextTrack;
+
             document.getElementById('shop-trigger').onclick = () => document.getElementById('shop-layer').style.display = 'flex';
             document.getElementById('close-shop').onclick = () => document.getElementById('shop-layer').style.display = 'none';
             document.querySelectorAll('.shop-item').forEach(item => {
