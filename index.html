@@ -22,7 +22,7 @@
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
-        /* --- GAME WORLD (Isometric Map) --- */
+        /* --- GAME WORLD --- */
         #game-viewport {
             width: 100vw; height: 100vh;
             overflow: auto; 
@@ -50,13 +50,24 @@
             width: 100%; height: 100%;
             background-size: cover;
             box-sizing: border-box;
-            /* Tiny negative margin to prevent white lines between diamonds */
             margin: -0.2px; 
         }
 
         .tile:hover {
             filter: brightness(1.2);
             cursor: pointer;
+        }
+
+        /* --- PLACEMENT GHOST --- */
+        #ghost-building {
+            position: fixed;
+            pointer-events: none;
+            display: none;
+            width: 100px;
+            height: 100px;
+            z-index: 50;
+            transform: translate(-50%, -50%);
+            opacity: 0.8;
         }
 
         /* --- UI ELEMENTS --- */
@@ -97,8 +108,9 @@
         .card { 
             width: 130px; height: 160px; background: #8e8e8e; 
             border: 3px solid #1a1a1a; border-radius: 10px; overflow: hidden; 
-            position: relative; 
+            position: relative; cursor: pointer;
         }
+        .card:hover { filter: brightness(1.1); }
         .full-png-img { width: 100%; height: 100%; object-fit: fill; }
     </style>
 </head>
@@ -109,6 +121,8 @@
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
     </div>
 
+    <img id="ghost-building" src="" alt="Ghost">
+
     <audio id="intro-audio" preload="auto">
         <source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg">
     </audio>
@@ -116,8 +130,7 @@
 
     <div id="game-viewport">
         <div id="map-container">
-            <div id="grid-layer" class="grid-layer">
-                </div>
+            <div id="grid-layer" class="grid-layer"></div>
         </div>
     </div>
 
@@ -131,8 +144,12 @@
             <div class="close-btn" onclick="toggleShop(false)">X</div>
             <div class="item-list-container">
                 <div class="grid-shop">
-                    <div class="card"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true" class="full-png-img"></div>
-                    <div class="card"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/labratory-no-build.png?raw=true" class="full-png-img"></div>
+                    <div class="card" onclick="selectBuilding('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true')">
+                        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true" class="full-png-img">
+                    </div>
+                    <div class="card" onclick="selectBuilding('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/labratory-no-build.png?raw=true')">
+                        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/labratory-no-build.png?raw=true" class="full-png-img">
+                    </div>
                 </div>
             </div>
         </div>
@@ -143,14 +160,14 @@
         const gridSize = 40; 
         const totalTiles = gridSize * gridSize;
         const gridLayer = document.getElementById('grid-layer');
-        const images = ['grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png', 'grid/grass5.png'];
+        // MATCHING YOUR FILE NAMES: grass, grass1, grass2, grass3, grass4
+        const images = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
         
         let tilePool = [];
         for (let i = 0; i < totalTiles; i++) {
             tilePool.push(images[i % images.length]);
         }
 
-        // Shuffle
         for (let i = tilePool.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [tilePool[i], tilePool[j]] = [tilePool[j], tilePool[i]];
@@ -160,7 +177,6 @@
         for (let i = 0; i < totalTiles; i++) {
             const tile = document.createElement('div');
             tile.className = 'tile';
-
             const leftN = (i % gridSize !== 0) ? placedTiles[i - 1] : null;
             const topN = (i >= gridSize) ? placedTiles[i - gridSize] : null;
 
@@ -179,6 +195,28 @@
             gridLayer.appendChild(tile);
         }
 
+        // --- PLACEMENT LOGIC ---
+        const ghost = document.getElementById('ghost-building');
+        function selectBuilding(imgSrc) {
+            ghost.src = imgSrc;
+            ghost.style.display = 'block';
+            toggleShop(false);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (ghost.style.display === 'block') {
+                ghost.style.left = e.clientX + 'px';
+                ghost.style.top = e.clientY + 'px';
+            }
+        });
+
+        // Click anywhere to "place" (for now just hides the ghost)
+        document.addEventListener('mousedown', () => {
+            if (ghost.style.display === 'block') {
+                ghost.style.display = 'none';
+            }
+        });
+
         // --- MUSIC PLAYLIST ---
         const playlist = [
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
@@ -190,7 +228,7 @@
 
         function playNextTrack() {
             bgMusic.src = playlist[currentTrack];
-            bgMusic.play().catch(e => console.log("Music blocked by browser."));
+            bgMusic.play().catch(e => {});
             currentTrack = (currentTrack + 1) % playlist.length;
         }
         bgMusic.onended = playNextTrack;
