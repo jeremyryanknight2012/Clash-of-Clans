@@ -120,8 +120,9 @@
         }
 
         .card {
-            width: 165px; /* Made wider */
-            height: 155px; /* Slightly shorter for better proportions */
+            /* Width adjusted to match the internal PNG proportions precisely */
+            width: 130px; 
+            height: 160px;
             background: #8e8e8e;
             border: 3px solid #1a1a1a;
             border-radius: 10px;
@@ -134,23 +135,24 @@
         }
 
         .card-header {
-            font-size: 14px;
+            font-size: 13px;
             margin-top: 6px;
             color: #fff;
         }
 
         .building-img {
-            width: 80px;
-            height: 80px;
+            width: 75px;
+            height: 75px;
             margin-top: 8px;
             object-fit: contain;
         }
 
-        /* Stretching the PNG to be wider and fill the card */
+        /* The specific style for the PNG-only Army Camp card */
         .full-png-img {
             width: 100%;
             height: 100%;
-            object-fit: fill; /* This stretches the image to fit the wider width */
+            display: block;
+            object-fit: fill; 
         }
 
         .price-bar {
