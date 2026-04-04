@@ -9,7 +9,7 @@
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; font-family: 'Luckiest Guy', cursive;
-            background-color: #0e3d06; user-select: none;
+            background-color: #000; user-select: none;
         }
 
         #world-bg {
@@ -29,17 +29,14 @@
         }
         .res-icon { width: 35px; height: 35px; margin-left: 10px; }
 
-        /* --- INTRO OVERLAY --- */
+        /* --- THE INTRO (WAITING FOR FIRST INTERACTION) --- */
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; z-index: 9999; cursor: pointer;
-            display: flex; justify-content: center; align-items: center;
         }
         #intro-overlay.hidden { display: none; }
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
-        #start-prompt { color: white; font-size: 24px; position: absolute; bottom: 10%; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
         /* --- MAP ENGINE --- */
         #game-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
@@ -103,7 +100,6 @@
     <div id="intro-overlay">
         <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
-        <div id="start-prompt">CLICK TO START</div>
     </div>
 
     <audio id="bg-music"></audio>
@@ -170,13 +166,12 @@
             initGrid();
             loadGame(); 
             
-            // Trigger sequence on click
-            document.getElementById('intro-overlay').onclick = function() {
-                this.style.pointerEvents = 'none'; // Lock from further clicks
-                document.getElementById('start-prompt').style.display = 'none';
+            // First click on the black screen triggers everything
+            document.getElementById('intro-overlay').addEventListener('click', function startGame() {
+                this.removeEventListener('click', startGame);
                 document.getElementById('intro-audio').play();
                 startIntroSequence();
-            };
+            }, { once: true });
 
             setInterval(() => saveGame("Autosave"), 30000);
             
@@ -194,15 +189,18 @@
             const intro1 = document.getElementById('intro-1');
             const overlay = document.getElementById('intro-overlay');
 
-            // Timing matched to the intro music length
+            intro0.style.display = 'block'; // Show first image immediately
+
             setTimeout(() => {
                 intro0.classList.remove('active');
+                intro0.style.display = 'none';
                 intro1.classList.add('active');
+                intro1.style.display = 'block';
                 setTimeout(() => {
                     overlay.classList.add('hidden');
                     playNextTrack();
-                }, 3500); 
-            }, 3500);
+                }, 3000); 
+            }, 3000);
         }
 
         function initGrid() {
