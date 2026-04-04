@@ -9,7 +9,12 @@
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; font-family: 'Luckiest Guy', cursive;
-            background-color: #0e3d06; 
+            /* YOUR NEW BACKGROUND */
+            background-image: url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/background/background.png?raw=true');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-color: #000; /* Fallback */
         }
 
         /* --- INTRO SCREEN --- */
@@ -25,28 +30,22 @@
         /* --- GAME WORLD --- */
         #game-viewport {
             width: 100vw; height: 100vh;
-            overflow: auto; /* Allows panning */
-            background: #1b4d0a;
-            display: block; /* Changed from flex to allow scrolling to work properly */
-        }
-
-        /* This wrapper ensures the scrollable area is huge so the map doesn't hit edges */
-        #scroll-canvas {
-            width: 5000px; 
-            height: 5000px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            cursor: grab;
+            overflow: hidden;
             position: relative;
         }
+        #game-viewport:active { cursor: grabbing; }
 
         #map-container {
-            position: relative;
+            position: absolute;
             width: 2400px; height: 2400px; 
             transform: rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
-            box-shadow: 0 0 100px rgba(0,0,0,0.5);
-            /* Removed negative margin - we handle positioning with the scroll-canvas now */
+            /* Transparent background so we see the world background underneath */
+            background: transparent;
+            /* Initial Center Position */
+            left: 50%; top: 50%;
+            margin-left: -1200px; margin-top: -1200px;
         }
 
         .grid-layer {
@@ -63,34 +62,11 @@
             margin: -0.2px; 
         }
 
-        .tile:hover {
-            filter: brightness(1.2);
-            cursor: pointer;
-        }
-
-        /* --- PLACEMENT GHOST --- */
-        #ghost-building {
-            position: fixed;
-            pointer-events: none;
-            display: none;
-            width: 100px;
-            height: 100px;
-            z-index: 50;
-            transform: translate(-50%, -50%);
-            opacity: 0.8;
-        }
-
-        /* --- UI ELEMENTS --- */
+        /* --- UI --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 10; }
-        .shop-btn { 
-            width: 120px; 
-            cursor: pointer; 
-            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
-            transition: transform 0.1s; 
-        }
+        .shop-btn { width: 120px; cursor: pointer; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); transition: transform 0.1s; }
         .shop-btn:active { transform: scale(0.9); }
 
-        /* --- SHOP LAYER --- */
         #shop-layer {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7); z-index: 100;
@@ -99,29 +75,8 @@
         .shop-container {
             width: 95vw; height: 90vh; background: #d3d7c6; border: 4px solid #1a1a1a;
             border-radius: 12px; display: flex; flex-direction: column; position: relative;
-            color: white; text-shadow: 2px 2px 0px #000;
         }
-        .close-btn { 
-            position: absolute; top: 5px; right: 10px; background: #ff3131; 
-            border: 3px solid #000; border-radius: 5px; padding: 5px 12px; 
-            cursor: pointer; z-index: 101; 
-        }
-        .item-list-container { 
-            flex-grow: 1; background-color: #3b2d38; margin: 10px; 
-            border-radius: 8px; border: 3px solid #1a1a1a; overflow-x: auto; 
-            display: flex; align-items: center; 
-        }
-        .grid-shop { 
-            display: inline-grid; grid-template-rows: repeat(2, 1fr); 
-            grid-auto-flow: column; gap: 8px; padding: 10px; height: calc(100% - 20px); 
-        }
-        .card { 
-            width: 130px; height: 160px; background: #8e8e8e; 
-            border: 3px solid #1a1a1a; border-radius: 10px; overflow: hidden; 
-            position: relative; cursor: pointer;
-        }
-        .card:hover { filter: brightness(1.1); }
-        .full-png-img { width: 100%; height: 100%; object-fit: fill; }
+        .close-btn { position: absolute; top: 5px; right: 10px; background: #ff3131; border: 3px solid #000; border-radius: 5px; padding: 5px 12px; cursor: pointer; color: white; }
     </style>
 </head>
 <body onload="startIntroSequence()">
@@ -131,39 +86,25 @@
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
     </div>
 
-    <img id="ghost-building" src="" alt="Ghost">
-
     <audio id="intro-audio" preload="auto">
         <source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg">
     </audio>
     <audio id="bg-music" preload="auto"></audio>
 
     <div id="game-viewport">
-        <div id="scroll-canvas">
-            <div id="map-container">
-                <div id="grid-layer" class="grid-layer"></div>
-            </div>
+        <div id="map-container">
+            <div id="grid-layer" class="grid-layer"></div>
         </div>
     </div>
 
     <div class="bottom-right-ui">
-        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" 
-             class="shop-btn" onclick="toggleShop(true)" alt="Shop">
+        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" class="shop-btn" onclick="toggleShop(true)">
     </div>
 
     <div id="shop-layer">
         <div class="shop-container">
             <div class="close-btn" onclick="toggleShop(false)">X</div>
-            <div class="item-list-container">
-                <div class="grid-shop">
-                    <div class="card" onclick="selectBuilding('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true')">
-                        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true" class="full-png-img">
-                    </div>
-                    <div class="card" onclick="selectBuilding('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/labratory-no-build.png?raw=true')">
-                        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/labratory-no-build.png?raw=true" class="full-png-img">
-                    </div>
-                </div>
-            </div>
+            <p style="text-align:center; color:black; font-size: 30px;">SHOP</p>
         </div>
     </div>
 
@@ -172,13 +113,13 @@
         const gridSize = 40; 
         const totalTiles = gridSize * gridSize;
         const gridLayer = document.getElementById('grid-layer');
+        // Your 5 grass tiles
         const images = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
         
         let tilePool = [];
-        for (let i = 0; i < totalTiles; i++) {
-            tilePool.push(images[i % images.length]);
-        }
+        for (let i = 0; i < totalTiles; i++) tilePool.push(images[i % images.length]);
 
+        // Shuffle Pool
         for (let i = tilePool.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [tilePool[i], tilePool[j]] = [tilePool[j], tilePool[i]];
@@ -194,8 +135,7 @@
             let foundIdx = 0;
             for (let j = 0; j < tilePool.length; j++) {
                 if (tilePool[j] !== leftN && tilePool[j] !== topN) {
-                    foundIdx = j;
-                    break;
+                    foundIdx = j; break;
                 }
             }
 
@@ -206,72 +146,55 @@
             gridLayer.appendChild(tile);
         }
 
-        // Center the view on the map
-        function centerMap() {
-            const viewport = document.getElementById('game-viewport');
-            const canvas = document.getElementById('scroll-canvas');
-            viewport.scrollLeft = (canvas.offsetWidth - viewport.offsetWidth) / 2;
-            viewport.scrollTop = (canvas.offsetHeight - viewport.offsetHeight) / 2;
-        }
+        // --- CAMERA PANNING ---
+        const viewport = document.getElementById('game-viewport');
+        const map = document.getElementById('map-container');
+        let isDragging = false;
+        let startX, startY;
+        let mapX = (window.innerWidth / 2) - 1200;
+        let mapY = (window.innerHeight / 2) - 1200;
 
-        // --- PLACEMENT LOGIC ---
-        const ghost = document.getElementById('ghost-building');
-        function selectBuilding(imgSrc) {
-            ghost.src = imgSrc;
-            ghost.style.display = 'block';
-            toggleShop(false);
-        }
+        map.style.left = mapX + "px";
+        map.style.top = mapY + "px";
 
-        document.addEventListener('mousemove', (e) => {
-            if (ghost.style.display === 'block') {
-                ghost.style.left = e.clientX + 'px';
-                ghost.style.top = e.clientY + 'px';
-            }
+        viewport.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - mapX;
+            startY = e.clientY - mapY;
         });
 
-        document.addEventListener('mousedown', () => {
-            if (ghost.style.display === 'block') {
-                ghost.style.display = 'none';
-            }
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            mapX = e.clientX - startX;
+            mapY = e.clientY - startY;
+            map.style.left = mapX + "px";
+            map.style.top = mapY + "px";
         });
 
-        // --- MUSIC ---
+        // --- INTRO & MUSIC ---
         const playlist = [
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
         ];
         let currentTrack = 0;
         const bgMusic = document.getElementById('bg-music');
 
-        function playNextTrack() {
-            bgMusic.src = playlist[currentTrack];
-            bgMusic.play().catch(e => {});
-            currentTrack = (currentTrack + 1) % playlist.length;
-        }
-        bgMusic.onended = playNextTrack;
-
-        // --- INTRO SEQUENCE ---
         function startIntroSequence() {
-            const introAudio = document.getElementById('intro-audio');
-            introAudio.play().catch(e => {});
-
-            // Initialize position
-            centerMap();
-
+            document.getElementById('intro-audio').play().catch(e => {});
             setTimeout(() => {
                 document.getElementById('intro-0').classList.remove('active');
                 document.getElementById('intro-1').classList.add('active');
                 setTimeout(() => {
                     document.getElementById('intro-overlay').classList.add('hidden');
-                    playNextTrack();
+                    bgMusic.src = playlist[0];
+                    bgMusic.play().catch(e => {});
                 }, 3000);
             }, 2000);
         }
 
-        function toggleShop(show) {
-            document.getElementById('shop-layer').style.display = show ? 'flex' : 'none';
-        }
+        function toggleShop(show) { document.getElementById('shop-layer').style.display = show ? 'flex' : 'none'; }
     </script>
 </body>
 </html>
