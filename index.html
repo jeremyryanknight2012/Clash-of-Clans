@@ -1,46 +1,299 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clash of Clans Clone</title>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+    <style>
+        /* --- GAME WORLD STYLES --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Luckiest Guy', cursive;
+        }
+
+        #game-canvas {
+            width: 100vw;
+            height: 100vh;
+            background: #4a7a2a; /* Placeholder for your grass map */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- UI BUTTONS (Main Screen) --- */
+        .bottom-right-ui {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+
+        .shop-btn {
+            width: 100px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .shop-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* --- SHOP OVERLAY (The Hidden Layer) --- */
+        #shop-layer {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .shop-container {
+            width: 95vw;
+            height: 90vh;
+            background: #d3d7c6; 
+            border: 4px solid #1a1a1a;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            color: white;
+            text-shadow: 2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000;
+        }
+
+        .top-nav {
+            background: #000;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 10px;
+            padding-bottom: 5px;
+        }
+
+        .nav-icon {
+            width: 50px;
+            height: 50px;
+            background: #8e8e8e;
+            border: 3px solid #444;
+            border-radius: 8px;
+        }
+
+        .nav-icon.active {
+            background: #fdfdfd;
+            border-color: #fff;
+            transform: translateY(-5px);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: #ff3131;
+            border: 3px solid #000;
+            border-radius: 5px;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 110;
+        }
+
+        .category-header {
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        .title-text {
+            color: #333;
+            font-size: 28px;
+            text-shadow: 2px 2px 0px #fff;
+            margin: 0 0 5px 0;
+        }
+
+        .sub-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .tab {
+            background: #5d6154;
+            padding: 4px 20px;
+            border-radius: 6px;
+            border: 2px solid #333;
+            font-size: 13px;
+        }
+
+        .tab.active { background: #84a95b; }
+
+        /* Scrollable Shop Area */
+        .item-list-container {
+            flex-grow: 1;
+            background-color: #3b2d38; 
+            margin: 5px 10px 10px 10px;
+            border-radius: 8px;
+            border: 3px solid #1a1a1a;
+            overflow-x: auto;
+            overflow-y: hidden;
+            display: flex;
+            align-items: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+        }
+
+        .grid {
+            display: inline-grid;
+            grid-template-rows: repeat(2, 1fr);
+            grid-auto-flow: column;
+            gap: 8px;
+            padding: 10px;
+            height: calc(100% - 20px);
+        }
+
+        .card {
+            width: 130px; 
+            height: 160px;
+            background: #8e8e8e;
+            border: 3px solid #1a1a1a;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .card-header { font-size: 13px; margin-top: 6px; }
+
+        .building-img {
+            width: 75px;
+            height: 75px;
+            margin-top: 8px;
+            object-fit: contain;
+        }
+
+        .full-png-img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: fill; 
+        }
+
+        .price-bar {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            position: absolute;
+            bottom: 0;
+            height: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom-left-radius: 7px;
+            border-bottom-right-radius: 7px;
+            font-size: 16px;
+        }
+
+        .resource-footer {
+            height: 45px;
+            background: #84a95b;
+            border-top: 4px solid #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+        }
+
+        /* Scrollbar Styling */
+        .item-list-container::-webkit-scrollbar { height: 14px; }
+        .item-list-container::-webkit-scrollbar-track { background: #222; border-radius: 10px; }
+        .item-list-container::-webkit-scrollbar-thumb { background: #84a95b; border: 2px solid #000; border-radius: 10px; }
+    </style>
 </head>
 <body>
+
+    <div id="game-canvas">
+        <h1>Your Village Map Goes Here</h1>
+        
+        <div class="bottom-right-ui">
+            <img src="buttons/shop_btn.png" class="shop-btn" onclick="toggleShop(true)" alt="Shop">
+        </div>
+    </div>
+
+    <div id="shop-layer">
+        <div class="shop-container">
+            <div class="close-btn" onclick="toggleShop(false)">X</div>
+
+            <div class="top-nav">
+                <div class="nav-icon active"></div>
+                <div class="nav-icon"></div>
+                <div class="nav-icon"></div>
+                <div class="nav-icon"></div>
+            </div>
+
+            <div class="category-header">
+                <div class="title-text">Buildings & traps</div>
+                <div class="sub-tabs">
+                    <div class="tab active">Army</div>
+                    <div class="tab">Resources</div>
+                    <div class="tab">Defenses</div>
+                    <div class="tab">Traps</div>
+                </div>
+            </div>
+
+            <div class="item-list-container">
+                <div class="grid">
+                    <div class="card">
+                        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true" class="full-png-img">
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Barracks</div>
+                        <img src="images/barracks.png" class="building-img">
+                        <div class="price-bar">100 💧</div>
+                    </div>
+
+                    <div class="card">
+                        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/labratory-no-build.png?raw=true" class="full-png-img">
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Spell factory</div>
+                        <img src="images/spell_factory.png" class="building-img">
+                        <div class="price-bar">150 000 💧</div>
+                    </div>
+
+                    <div class="card"><div class="card-header">Cannon</div><img src="images/cannon.png" class="building-img"><div class="price-bar">250 🟡</div></div>
+                    <div class="card"><div class="card-header">Archer tower</div><img src="images/archer_tower.png" class="building-img"><div class="price-bar">1 000 🟡</div></div>
+
+                    <div class="card"><div class="card-header">Gold mine</div><img src="images/gold_mine.png" class="building-img"><div class="price-bar">150 🟡</div></div>
+                    <div class="card"><div class="card-header">Elixir collector</div><img src="images/elixir_collector.png" class="building-img"><div class="price-bar">150 💧</div></div>
+                </div>
+            </div>
+
+            <div class="resource-footer">
+                <div class="res-item">🟡 185 617</div>
+                <div class="res-item">💧 192 079</div>
+                <div class="res-item">💎 15</div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const config = {
-            type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            parent: 'game-container',
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            }
-        };
-
-        const game = new Phaser.Game(config);
-
-        function preload() {
-            // 1. Load your assets here
-            this.load.image('map', 'assets/grass_bg.png');
-            this.load.image('cannon', 'assets/cannon.png');
-        }
-
-        function create() {
-            // 2. Place things on the screen
-            this.add.image(400, 300, 'map');
+        // FUNCTION TO SHOW/HIDE SHOP WITHOUT PAGE RELOAD
+        function toggleShop(show) {
+            const shop = document.getElementById('shop-layer');
+            shop.style.display = show ? 'flex' : 'none';
             
-            // Create a building that can be clicked
-            let cannon = this.add.sprite(400, 300, 'cannon').setInteractive();
-            
-            cannon.on('pointerdown', () => {
-                console.log("You clicked the cannon!");
-                // Here is where you would open your Shop UI
-            });
-        }
-
-        function update() {
-            // 3. This runs 60 times a second (for animations/input)
+            // You can also play a "Shop Open" sound effect here!
         }
     </script>
+
 </body>
 </html>
