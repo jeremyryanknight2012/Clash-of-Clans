@@ -18,6 +18,7 @@
             background-size: cover; background-position: center; z-index: -1; 
         }
 
+        /* --- UI --- */
         #resource-bar {
             position: fixed; top: 10px; right: 10px; display: flex; flex-direction: column; 
             gap: 8px; z-index: 1000; align-items: flex-end;
@@ -29,15 +30,20 @@
         }
         .res-icon { width: 35px; height: 35px; margin-left: 10px; }
 
+        /* --- FIXED INTRO --- */
+        #click-to-load {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 10000; display: flex; justify-content: center; align-items: center;
+            color: white; font-size: 30px; cursor: pointer;
+        }
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #000; z-index: 9999; 
-            pointer-events: none; /* Disables all clicking/skipping */
+            background-color: #000; z-index: 9999; display: none;
         }
-        #intro-overlay.hidden { display: none; }
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
+        /* --- MAP --- */
         #game-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         #map-container {
             position: absolute; width: 2400px; height: 2400px; 
@@ -88,6 +94,8 @@
 <body>
 
     <div id="save-status">VILLAGE SYNCED</div>
+
+    <div id="click-to-load">LOADING VILLAGE... (CLICK TO ENTER)</div>
 
     <div id="resource-bar">
         <div class="res-item"><span id="gold-val">750</span> <img class="res-icon" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/coin.png?raw=true"></div>
@@ -164,7 +172,14 @@
         window.onload = () => {
             initGrid();
             loadGame(); 
-            startIntroSequence();
+            
+            document.getElementById('click-to-load').onclick = function() {
+                this.style.display = 'none';
+                document.getElementById('intro-overlay').style.display = 'block';
+                document.getElementById('intro-audio').play(); // Sync audio to start of intro
+                startIntroSequence();
+            };
+
             setInterval(() => saveGame("Autosave"), 30000);
             
             setInterval(() => {
@@ -185,11 +200,10 @@
                 intro0.classList.remove('active');
                 intro1.classList.add('active');
                 setTimeout(() => {
-                    document.getElementById('intro-audio').play();
-                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
                     playNextTrack();
-                }, 3000); // Wait 3s on second intro
-            }, 3000); // Wait 3s on first intro
+                }, 3000);
+            }, 3000);
         }
 
         function initGrid() {
@@ -285,7 +299,7 @@
         }
 
         window.onmousedown = (e) => {
-            if (e.target.closest('#shop-layer') || e.target.closest('#resource-bar') || document.getElementById('intro-overlay').offsetParent !== null) return;
+            if (e.target.closest('#shop-layer') || e.target.closest('#resource-bar') || document.getElementById('intro-overlay').style.display === 'block') return;
             isMouseDown = true; isDragging = false;
             startX = e.clientX - mapX; startY = e.clientY - mapY;
         };
