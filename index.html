@@ -23,7 +23,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: #fff;
+            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -36,16 +36,16 @@
             transition: opacity 0.8s ease-out;
         }
 
-        .supercell-logo {
-            width: 300px;
-            opacity: 0;
-            transform: scale(0.9);
-            transition: all 0.5s ease-out;
+        .intro-img {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none; /* Hidden by default */
         }
 
-        .supercell-logo.visible {
-            opacity: 1;
-            transform: scale(1);
+        .intro-img.active {
+            display: block;
         }
 
         /* --- GAME WORLD --- */
@@ -113,10 +113,11 @@
         .price-bar { width: 100%; background: rgba(0,0,0,0.4); position: absolute; bottom: 0; height: 35px; display: flex; justify-content: center; align-items: center; }
     </style>
 </head>
-<body onload="startIntro()">
+<body onload="startIntroSequence()">
 
     <div id="intro-overlay">
-        <img id="logo" src="images/supercell_logo.png" class="supercell-logo" alt="SUPERCELL">
+        <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
+        <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
     </div>
 
     <audio id="intro-audio" preload="auto">
@@ -137,31 +138,38 @@
                 <div class="grid">
                     <div class="card"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true" class="full-png-img"></div>
                     <div class="card"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/labratory-no-build.png?raw=true" class="full-png-img"></div>
-                    <div class="card"><div style="text-align:center">Barracks</div><img src="images/barracks.png" class="building-img"><div class="price-bar">100 💧</div></div>
+                    <div class="card">
+                        <div style="text-align:center; padding-top: 5px;">Barracks</div>
+                        <img src="images/barracks.png" class="building-img">
+                        <div class="price-bar">100 💧</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        function startIntro() {
+        function startIntroSequence() {
             const overlay = document.getElementById('intro-overlay');
-            const logo = document.getElementById('logo');
+            const intro0 = document.getElementById('intro-0');
+            const intro1 = document.getElementById('intro-1');
             const audio = document.getElementById('intro-audio');
 
-            // 1. Show Logo
-            logo.classList.add('visible');
-
-            // 2. Play the Sound
+            // 1. Play the Sound
             audio.volume = 1.0;
-            audio.play().catch(error => {
-                console.log("Auto-play blocked by browser. This is normal if there was no interaction on the host site yet.");
-            });
+            audio.play().catch(e => console.log("Audio waiting for site launch interaction."));
 
-            // 3. Wait 3.5 seconds then fade out
+            // 2. Show first screen (Supercell) for 2 seconds
             setTimeout(() => {
-                overlay.classList.add('hidden');
-            }, 3500);
+                intro0.classList.remove('active');
+                intro1.classList.add('active');
+
+                // 3. Show second screen (Loading) for 3 more seconds
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 3000);
+
+            }, 2000);
         }
 
         function toggleShop(show) {
