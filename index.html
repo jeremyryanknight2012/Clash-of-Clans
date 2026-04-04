@@ -11,15 +11,16 @@
             overflow: hidden; 
         }
 
-        /* The only visible element on the screen */
+        /* Positioned in the bottom right as requested */
         #shop-button {
             position: absolute;
             bottom: 20px;
             right: 20px;
-            width: 100px;
+            width: 120px; /* Adjusted size for the new asset */
             cursor: pointer;
             z-index: 100;
             transition: transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #shop-button:active {
@@ -29,7 +30,9 @@
 </head>
 <body>
 
-    <img id="shop-button" src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/refs/heads/main/images/shop-button.png" alt="Shop">
+    <a href="shop/shop.html">
+        <img id="shop-button" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" alt="Shop">
+    </a>
 
 </body>
 </html>
