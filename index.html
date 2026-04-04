@@ -1,233 +1,441 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Clash of Clans Clone</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+
     <style>
+
         body, html {
+
             margin: 0; padding: 0; width: 100%; height: 100%;
+
             overflow: hidden; font-family: 'Luckiest Guy', cursive;
-            background-color: #0e3d06;
-            user-select: none;
+
+            background-color: #0e3d06; /* Dark green fallback */
+
         }
+
+
+
+        /* --- THE WORLD BACKGROUND --- */
 
         #world-bg {
+
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-image: url('background/background.png');
+
+            background-image: url('https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/background/background.png?raw=true');
+
             background-size: cover; background-position: center;
+
             z-index: -1; 
+
         }
+
+
 
         /* --- INTRO SCREEN --- */
+
         #intro-overlay {
+
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+
             background-color: #000; display: flex; justify-content: center;
+
             align-items: center; z-index: 9999;
-            transition: opacity 1s ease-out;
+
         }
+
+        #intro-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.8s ease-out; }
+
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
+
         .intro-img.active { display: block; }
 
-        /* --- THE MAP --- */
+
+
+        /* --- GAME VIEWPORT --- */
+
         #game-viewport {
+
             width: 100vw; height: 100vh;
+
             position: relative; overflow: hidden;
-            cursor: default;
+
+            touch-action: none; /* Prevents mobile interference */
+
         }
+
+
 
         #map-container {
+
             position: absolute;
+
             width: 2400px; height: 2400px; 
+
             transform: rotateX(60deg) rotateZ(-45deg);
+
             transform-style: preserve-3d;
+
+            will-change: transform, left, top;
+
         }
+
+
 
         .grid-layer {
+
             position: absolute; width: 100%; height: 100%;
+
             display: grid;
+
             grid-template-columns: repeat(40, 1fr); 
+
             grid-template-rows: repeat(40, 1fr);
+
         }
+
+
 
         .tile {
+
             width: 100%; height: 100%;
+
             background-size: cover;
-            position: relative;
-            transform-style: preserve-3d;
-            pointer-events: auto;
+
+            margin: -0.2px; 
+
+            transition: filter 0.1s;
+
         }
 
-        /* --- THE BUILDING --- */
-        .building {
-            position: absolute;
-            bottom: 15%; left: 50%;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: bottom center;
-            transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
-            transform-origin: bottom center;
-            z-index: 100;
-            pointer-events: none; /* Let clicks go through to the tile */
-            filter: drop-shadow(5px 10px 5px rgba(0,0,0,0.4));
+
+
+        /* Highlight tile on hover/touch */
+
+        .tile:hover {
+
+            filter: brightness(1.3) saturate(1.2);
+
+            cursor: pointer;
+
+            outline: 1px solid rgba(255,255,255,0.3);
+
         }
 
-        .size-4x4 { width: 400%; height: 600%; } 
-        .size-3x3 { width: 300%; height: 450%; } 
-        .size-2x2 { width: 200%; height: 300%; }
+
 
         /* --- UI --- */
-        .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
-        .shop-btn { width: 120px; cursor: pointer; }
+
+        .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 10; }
+
+        .shop-btn { width: 120px; cursor: pointer; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); transition: transform 0.1s; }
+
+        .shop-btn:active { transform: scale(0.9); }
+
+
 
         #shop-layer {
+
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7); z-index: 2000;
+
+            background: rgba(0, 0, 0, 0.7); z-index: 100;
+
             justify-content: center; align-items: center;
+
         }
-        .shop-container { width: 80vw; height: 60vh; background: #d3d7c6; border: 4px solid #1a1a1a; padding: 20px; border-radius: 15px; }
+
+        .shop-container {
+
+            width: 95vw; height: 90vh; background: #d3d7c6; border: 4px solid #1a1a1a;
+
+            border-radius: 12px; display: flex; flex-direction: column; position: relative;
+
+        }
+
+        .close-btn { position: absolute; top: 5px; right: 10px; background: #ff3131; border: 3px solid #000; border-radius: 5px; padding: 5px 12px; cursor: pointer; color: white; }
+
     </style>
+
 </head>
-<body onload="initVillage(); startIntro();">
+
+<body onload="startIntroSequence()">
+
+
 
     <div id="world-bg"></div>
 
+
+
     <div id="intro-overlay">
-        <img id="intro-0" src="intro/intro.png" class="intro-img active">
-        <img id="intro-1" src="intro/intro1.png" class="intro-img">
+
+        <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
+
+        <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
+
     </div>
 
-    <audio id="music-player"></audio>
+
+
+    <audio id="intro-audio" preload="auto">
+
+        <source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg">
+
+    </audio>
+
+    <audio id="bg-music" preload="auto"></audio>
+
+
 
     <div id="game-viewport">
+
         <div id="map-container">
+
             <div id="grid-layer" class="grid-layer"></div>
+
         </div>
+
     </div>
+
+
 
     <div class="bottom-right-ui">
-        <img src="buttons/shop.png" class="shop-btn" onclick="toggleShop(true)">
+
+        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" class="shop-btn" onclick="toggleShop(true)">
+
     </div>
+
+
 
     <div id="shop-layer">
+
         <div class="shop-container">
-            <button style="float:right;" onclick="toggleShop(false)">CLOSE</button>
-            <h2 style="text-align:center; color:black;">SHOP</h2>
-            <div style="display:flex; gap:20px; justify-content:center; margin-top:50px;">
-                <div onclick="selectBuilding('army_camp')" style="cursor:pointer; color:black; text-align:center;">
-                    <img src="shop/army_camp.png" width="80"><br>Army Camp
-                </div>
-            </div>
+
+            <div class="close-btn" onclick="toggleShop(false)">X</div>
+
+            <p style="text-align:center; color:black; font-size: 30px;">SHOP</p>
+
         </div>
+
     </div>
 
+
+
     <script>
-        let isDragging = false;
-        let selectedType = null;
-        let mDown = false;
-        let startX, startY;
-        let mapX = (window.innerWidth/2)-1200;
-        let mapY = (window.innerHeight/2)-800;
+
+        // --- GRID GENERATION ---
+
+        const gridSize = 40; 
+
+        const totalTiles = gridSize * gridSize;
+
+        const gridLayer = document.getElementById('grid-layer');
+
+        const images = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
+
         
-        // --- MUSIC PLAYLIST ---
-        const playlist = ['audio/coc-intro.mp3', 'audio/game1.mp3', 'audio/game2.mp3'];
-        let currentTrack = 0;
-        const audio = document.getElementById('music-player');
 
-        audio.onended = () => {
-            currentTrack = (currentTrack + 1) % playlist.length;
-            playTrack(currentTrack);
-        };
+        let tilePool = [];
 
-        function playTrack(index) {
-            audio.src = playlist[index];
-            audio.play().catch(e => console.log("Audio waiting for user interaction"));
+        for (let i = 0; i < totalTiles; i++) tilePool.push(images[i % images.length]);
+
+
+
+        for (let i = tilePool.length - 1; i > 0; i--) {
+
+            const j = Math.floor(Math.random() * (i + 1));
+
+            [tilePool[i], tilePool[j]] = [tilePool[j], tilePool[i]];
+
         }
 
-        // --- GRID & BUILDING ---
-        function initVillage() {
-            const grid = document.getElementById('grid-layer');
-            const grass = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
+
+
+        const placedTiles = [];
+
+        for (let i = 0; i < totalTiles; i++) {
+
+            const tile = document.createElement('div');
+
+            tile.className = 'tile';
+
+            tile.dataset.id = i;
+
             
-            for (let i = 0; i < 1600; i++) {
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.id = `tile-${i}`;
-                tile.dataset.index = i;
-                tile.style.backgroundImage = `url('${grass[Math.floor(Math.random()*grass.length)]}')`;
-                grid.appendChild(tile);
-            }
 
-            // Centralized click listener
-            window.addEventListener('click', (e) => {
-                if (isDragging) return;
-                const tile = e.target.closest('.tile');
-                if (tile && selectedType) {
-                    spawnBuilding(tile.dataset.index, selectedType, '3x3');
-                    selectedType = null;
-                    document.body.style.cursor = 'default';
+            // Tile Click Interaction
+
+            tile.onclick = (e) => {
+
+                if (isActuallyDragging) return; // Don't click if we are just panning
+
+                console.log("Clicked tile:", tile.dataset.id);
+
+                tile.style.filter = "brightness(2)"; // Visual feedback
+
+                setTimeout(() => tile.style.filter = "", 200);
+
+            };
+
+
+
+            const leftN = (i % gridSize !== 0) ? placedTiles[i - 1] : null;
+
+            const topN = (i >= gridSize) ? placedTiles[i - gridSize] : null;
+
+
+
+            let foundIdx = 0;
+
+            for (let j = 0; j < tilePool.length; j++) {
+
+                if (tilePool[j] !== leftN && tilePool[j] !== topN) {
+
+                    foundIdx = j; break;
+
                 }
-            });
 
-            spawnBuilding(820, 'townhall', '4x4', 1);
-            spawnBuilding(738, 'builder_hut', '2x2');
-            spawnBuilding(743, 'gold_mine', '2x2');
-        }
-
-        function spawnBuilding(tileId, type, sizeClass, level = null) {
-            const tile = document.getElementById(`tile-${tileId}`);
-            if (!tile || tile.querySelector('.building')) return;
-
-            const b = document.createElement('div');
-            b.className = `building size-${sizeClass}`;
-            const img = (type === 'townhall') ? `${type}${level || 1}.png` : `${type}.png`;
-            b.style.backgroundImage = `url('shop/${img}')`;
-            tile.appendChild(b);
-        }
-
-        // --- CAMERA PANNING ---
-        const map = document.getElementById('map-container');
-        map.style.left = mapX + "px"; map.style.top = mapY + "px";
-
-        window.addEventListener('mousedown', (e) => {
-            if(e.target.closest('#map-container')) {
-                mDown = true; isDragging = false;
-                startX = e.clientX - mapX; startY = e.clientY - mapY;
             }
+
+
+
+            const selectedImg = tilePool[foundIdx];
+
+            tile.style.backgroundImage = `url('${selectedImg}')`;
+
+            placedTiles.push(selectedImg);
+
+            tilePool.splice(foundIdx, 1);
+
+            gridLayer.appendChild(tile);
+
+        }
+
+
+
+        // --- CAMERA PANNING (LEFT CLICK) ---
+
+        const viewport = document.getElementById('game-viewport');
+
+        const map = document.getElementById('map-container');
+
+        let isMouseDown = false;
+
+        let isActuallyDragging = false; 
+
+        let startX, startY;
+
+        let mapX = (window.innerWidth / 2) - 1200;
+
+        let mapY = (window.innerHeight / 2) - 800;
+
+
+
+        map.style.left = mapX + "px";
+
+        map.style.top = mapY + "px";
+
+
+
+        viewport.addEventListener('mousedown', (e) => {
+
+            isMouseDown = true;
+
+            isActuallyDragging = false;
+
+            startX = e.clientX - mapX;
+
+            startY = e.clientY - mapY;
+
         });
+
+
 
         window.addEventListener('mousemove', (e) => {
-            if (!mDown) return;
-            let moveX = e.clientX - startX;
-            let moveY = e.clientY - startY;
-            if (Math.abs(moveX - mapX) > 5) isDragging = true;
-            mapX = moveX; mapY = moveY;
-            map.style.left = mapX + "px"; map.style.top = mapY + "px";
+
+            if (!isMouseDown) return;
+
+            isActuallyDragging = true; // We moved, so it's a drag, not a click
+
+            mapX = e.clientX - startX;
+
+            mapY = e.clientY - startY;
+
+            map.style.left = mapX + "px";
+
+            map.style.top = mapY + "px";
+
         });
 
-        window.addEventListener('mouseup', () => mDown = false);
 
-        // --- INTRO SEQUENCE ---
-        function startIntro() {
-            playTrack(0);
-            const overlay = document.getElementById('intro-overlay');
+
+        window.addEventListener('mouseup', () => {
+
+            isMouseDown = false;
+
+            // Short delay to reset drag state so clicks don't fire immediately after drag
+
+            setTimeout(() => { isActuallyDragging = false; }, 10);
+
+        });
+
+
+
+        // --- INTRO & MUSIC ---
+
+        const playlist = [
+
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
+
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
+
+        ];
+
+        let currentTrack = 0;
+
+        const bgMusic = document.getElementById('bg-music');
+
+
+
+        function startIntroSequence() {
+
+            document.getElementById('intro-audio').play().catch(e => {});
+
             setTimeout(() => {
+
                 document.getElementById('intro-0').classList.remove('active');
+
                 document.getElementById('intro-1').classList.add('active');
+
                 setTimeout(() => {
-                    overlay.style.opacity = '0';
-                    setTimeout(() => overlay.remove(), 1000); // Fully delete the blocker
-                }, 2000);
+
+                    document.getElementById('intro-overlay').classList.add('hidden');
+
+                    bgMusic.src = playlist[0];
+
+                    bgMusic.play().catch(e => {});
+
+                }, 3000);
+
             }, 2000);
+
         }
 
-        function toggleShop(s) { document.getElementById('shop-layer').style.display = s ? 'flex' : 'none'; }
-        function selectBuilding(t) { 
-            selectedType = t; 
-            toggleShop(false); 
-            document.body.style.cursor = 'crosshair';
-        }
+
+
+        function toggleShop(show) { document.getElementById('shop-layer').style.display = show ? 'flex' : 'none'; }
+
     </script>
+
 </body>
+
 </html>
