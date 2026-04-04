@@ -79,9 +79,17 @@
             background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center;
         }
         .shop-container { width: 80vw; height: 60vh; background: #d3d7c6; border: 4px solid #1a1a1a; border-radius: 12px; position: relative; padding: 20px; }
+        
+        /* Save Notification */
+        #save-status {
+            position: fixed; bottom: 10px; left: 10px; color: rgba(255,255,255,0.5);
+            font-size: 12px; z-index: 2000; pointer-events: none;
+        }
     </style>
 </head>
 <body>
+
+    <div id="save-status">VILLAGE SYNCED</div>
 
     <div id="resource-bar">
         <div class="res-item"><span id="gold-val">750</span> <img class="res-icon" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/coin.png?raw=true"></div>
@@ -128,15 +136,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // --- FIREBASE CONFIG (REPLACE THIS WITH YOURS) ---
         const firebaseConfig = {
-            apiKey: "PASTE_YOUR_API_KEY_HERE",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "SENDER_ID",
-            appId: "APP_ID"
+            apiKey: "AIzaSyDtAQZBz45bfocaqj08uUXLfPL9vFScstc",
+            authDomain: "clash-of-clans-4c664.firebaseapp.com",
+            databaseURL: "https://clash-of-clans-4c664-default-rtdb.firebaseio.com",
+            projectId: "clash-of-clans-4c664",
+            storageBucket: "clash-of-clans-4c664.firebasestorage.app",
+            messagingSenderId: "417308170977",
+            appId: "1:417308170977:web:ef0cd85423f830f4ecb5a0",
+            measurementId: "G-XY5Q04934M"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -144,7 +152,7 @@
 
         // --- GAME VARIABLES ---
         let resources = { gold: 750, elixir: 750, dark: 0, gems: 500 };
-        let buildingsData = []; // To store building positions
+        let buildingsData = []; 
         let mapX = (window.innerWidth/2)-1200, mapY = (window.innerHeight/2)-800;
         let isMouseDown = false, isDragging = false, selectedBuilding = null;
         let startX, startY;
@@ -155,11 +163,11 @@
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
         ];
 
-        // --- INITIALIZE ---
         window.onload = () => {
             initGrid();
-            loadGame(); // Load from Firebase
+            loadGame(); 
             setupEvents();
+            startAutosaveTimer();
         };
 
         function initGrid() {
@@ -199,7 +207,7 @@
 
             if (shouldSave) {
                 buildingsData.push({ tileId, type, isTH });
-                saveGame();
+                saveGame("Building Placed");
             }
         }
 
@@ -215,7 +223,7 @@
                         e.stopPropagation();
                         resources[resType] += 50;
                         updateUI();
-                        saveGame();
+                        saveGame("Resources Collected");
                         bubble.remove();
                     };
                     tile.appendChild(bubble);
@@ -223,11 +231,17 @@
             }, 15000);
         }
 
-        // --- FIREBASE DATA ---
-        function saveGame() {
+        // --- FIREBASE DATA & AUTOSAVE ---
+        function saveGame(reason = "Autosave") {
             set(ref(db, 'users/player1'), {
                 resources: resources,
-                buildings: buildingsData
+                buildings: buildingsData,
+                lastSave: new Date().getTime()
+            }).then(() => {
+                const status = document.getElementById('save-status');
+                status.innerText = `LAST SYNC: ${reason.toUpperCase()}`;
+                status.style.color = "#4CAF50";
+                setTimeout(() => status.style.color = "rgba(255,255,255,0.5)", 2000);
             });
         }
 
@@ -238,20 +252,33 @@
                     resources = data.resources;
                     updateUI();
                     if (data.buildings) {
-                        data.buildings.forEach(b => spawnBuilding(b.tileId, b.type, b.isTH, false));
-                        buildingsData = data.buildings;
+                        // Clear existing buildings before loading
+                        document.querySelectorAll('.building').forEach(b => b.remove());
+                        buildingsData = [];
+                        data.buildings.forEach(b => spawnBuilding(b.tileId, b.type, b.isTH, true));
                     }
                 } else {
-                    // Default starters if no save found
                     spawnBuilding(820, 'townhall1', true, true);
                 }
             }, { onlyOnce: true });
         }
 
+        function startAutosaveTimer() {
+            setInterval(() => {
+                saveGame("Periodic Autosave");
+            }, 30000); // Saves every 30 seconds
+        }
+
+        // Save when user leaves the page
+        window.onbeforeunload = () => {
+            saveGame("Exit Save");
+        };
+
         function updateUI() {
             document.getElementById('gold-val').innerText = resources.gold;
             document.getElementById('elixir-val').innerText = resources.elixir;
             document.getElementById('gem-val').innerText = resources.gems;
+            document.getElementById('dark-elixir-val').innerText = resources.dark;
         }
 
         // --- CAMERA & UI EVENTS ---
