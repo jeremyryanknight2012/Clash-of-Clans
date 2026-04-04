@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clash of Clans Clone - Merged</title>
+    <title>Clash of Clans Clone</title>
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
     <style>
         body, html {
@@ -12,7 +12,7 @@
             background-color: #051a02; user-select: none;
         }
 
-        /* --- UI ELEMENTS --- */
+        /* --- UI --- */
         #resource-bar {
             position: fixed; top: 10px; right: 10px; display: flex; flex-direction: column; 
             gap: 8px; z-index: 1000; align-items: flex-end;
@@ -35,10 +35,15 @@
         .intro-img.active { display: block; }
 
         /* --- GAME ENGINE --- */
-        #game-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; cursor: grab; }
+        #game-viewport { 
+            width: 100vw; height: 100vh; 
+            position: relative; overflow: hidden; 
+            cursor: default; /* Regular cursor by default */
+        }
         
         #world-surface {
-            position: absolute; width: 5000px; height: 5000px;
+            position: absolute; 
+            width: 4000px; height: 4000px;
             will-change: transform;
         }
 
@@ -57,6 +62,7 @@
         .tile { 
             width: 100%; height: 100%; position: relative; 
             transform-style: preserve-3d; background-size: cover; 
+            cursor: pointer; /* Finger pointer for tiles */
         }
         .tile:hover { filter: brightness(1.2); }
 
@@ -64,9 +70,8 @@
         .building-wrapper {
             position: absolute; bottom: 15%; left: 50%; 
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
-            transform-origin: bottom center; z-index: 10; cursor: pointer;
+            transform-origin: bottom center; z-index: 10;
             display: flex; flex-direction: column; align-items: center;
-            pointer-events: auto;
         }
         .building-img {
             background-size: contain; background-repeat: no-repeat; background-position: bottom center;
@@ -76,17 +81,13 @@
             background: rgba(255,255,0,0.9); color: black; padding: 2px 8px;
             border-radius: 10px; font-size: 14px; margin-bottom: 5px;
             border: 2px solid #000; pointer-events: none; display: none;
-            animation: bounce 2s infinite;
         }
-
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
         .size-1x1 { width: 40px; height: 60px; }
         .size-2x2 { width: 80px; height: 120px; }
-        .size-3x3 { width: 120px; height: 180px; }
         .size-4x4 { width: 160px; height: 240px; }
 
-        /* --- SHOP UI --- */
+        /* --- UI BUTTONS --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .shop-btn { width: 120px; cursor: pointer; }
         #shop-layer {
@@ -128,7 +129,7 @@
 
     <div id="shop-layer">
         <div class="shop-container">
-            <button id="close-shop" style="float:right;">X</button>
+            <button id="close-shop" style="float:right; cursor:pointer;">X</button>
             <h2 style="text-align:center; color:black;">SHOP</h2>
             <div class="shop-grid">
                 <div class="shop-item" data-type="gold_mine"><img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/gold_mine.png?raw=true" width="60"><br>Gold Mine</div>
@@ -159,19 +160,18 @@
         let buildingsData = []; 
         let selectedBuilding = null;
 
-        // Camera State
         const world = document.getElementById('world-surface');
         const viewport = document.getElementById('game-viewport');
         let isPanning = false;
         let panStartX, panStartY;
-        let currentX = (window.innerWidth / 2) - 2500;
-        let currentY = (window.innerHeight / 2) - 2500;
-        let dragThreshold = false;
+        let currentX = (window.innerWidth / 2) - 2000;
+        let currentY = (window.innerHeight / 2) - 2000;
+        let dragActive = false;
 
-        // --- GRID SYSTEM ---
-        window.setupGrid = function() {
+        // --- GRID ---
+        function setupGrid() {
             const gridLayer = document.getElementById('grid-layer');
-            const grassImages = [
+            const grass = [
                 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass.png?raw=true',
                 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass1.png?raw=true',
                 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass2.png?raw=true'
@@ -181,48 +181,52 @@
                 const tile = document.createElement('div');
                 tile.className = 'tile';
                 tile.id = `tile-${i}`;
-                const randomGrass = grassImages[Math.floor(Math.random() * grassImages.length)];
-                tile.style.backgroundImage = `url('${randomGrass}')`;
+                tile.style.backgroundImage = `url('${grass[i % 3]}')`;
                 
-                tile.addEventListener('click', () => {
-                    if (dragThreshold) return; // Prevent building while dragging map
+                tile.onclick = (e) => {
+                    if (dragActive) return;
                     if (selectedBuilding) {
                         spawnBuilding(i, selectedBuilding, true);
                         selectedBuilding = null;
                     }
-                });
+                };
                 gridLayer.appendChild(tile);
             }
             updateWorldPos();
         }
 
-        // --- INTRO & MUSIC ---
-        window.startIntro = function() {
-            document.getElementById('click-prompt').style.display = 'none';
-            const audio = document.getElementById('intro-audio');
-            audio.play();
+        // --- CAMERA ---
+        viewport.onmousedown = (e) => {
+            if(e.target.closest('.shop-btn') || e.target.closest('#shop-layer')) return;
+            isPanning = true;
+            dragActive = false;
+            panStartX = e.clientX - currentX;
+            panStartY = e.clientY - currentY;
+        };
 
-            setTimeout(() => {
-                document.getElementById('intro-0').classList.remove('active');
-                document.getElementById('intro-1').classList.add('active');
-                setTimeout(() => {
-                    document.getElementById('intro-overlay').classList.add('hidden');
-                    const bg = document.getElementById('bg-music');
-                    bg.src = "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3";
-                    bg.play();
-                }, 2500);
-            }, 2500);
+        window.onmousemove = (e) => {
+            if (!isPanning) return;
+            dragActive = true;
+            currentX = e.clientX - panStartX;
+            currentY = e.clientY - panStartY;
+            updateWorldPos();
+        };
+
+        window.onmouseup = () => isPanning = false;
+
+        function updateWorldPos() {
+            world.style.left = currentX + "px";
+            world.style.top = currentY + "px";
         }
 
-        // --- BUILDING LOGIC ---
+        // --- BUILDING & COLLECTION ---
         function spawnBuilding(tileId, type, shouldSave = false) {
             const tile = document.getElementById(`tile-${tileId}`);
             if (!tile || tile.querySelector('.building-wrapper')) return;
 
-            let sizeClass = (type === 'townhall1') ? 'size-4x4' : 'size-2x2';
-            
+            let size = (type === 'townhall1') ? 'size-4x4' : 'size-2x2';
             const wrapper = document.createElement('div');
-            wrapper.className = `building-wrapper ${sizeClass}`;
+            wrapper.className = `building-wrapper ${size}`;
             
             const bubble = document.createElement('div');
             bubble.className = 'collect-bubble';
@@ -235,50 +239,43 @@
 
             tile.appendChild(wrapper);
 
-            const bIndex = buildingsData.length;
+            wrapper.onclick = (e) => {
+                e.stopPropagation();
+                if(dragActive) return;
+                collectResources(tileId);
+            };
+
             if (shouldSave) {
                 buildingsData.push({ tileId, type, stored: 0 });
                 saveGame();
             }
-
-            wrapper.onclick = (e) => {
-                e.stopPropagation();
-                collectResources(tileId);
-            };
         }
 
         function collectResources(tileId) {
             const b = buildingsData.find(item => item.tileId === tileId);
             if (!b || b.stored === 0) return;
-
             if (b.type === 'gold_mine') resources.gold += b.stored;
             if (b.type === 'elixir_collector') resources.elixir += b.stored;
-            
             b.stored = 0;
             updateUI();
-            updateBuildingBubbles();
+            updateBubbles();
             saveGame();
         }
 
-        // --- ENGINE LOOPS ---
         setInterval(() => {
             buildingsData.forEach(b => {
-                if (b.type === 'gold_mine' || b.type === 'elixir_collector') {
-                    b.stored += 1;
-                }
+                if (b.type === 'gold_mine' || b.type === 'elixir_collector') b.stored += 1;
             });
-            updateBuildingBubbles();
+            updateBubbles();
         }, 3000);
 
-        function updateBuildingBubbles() {
+        function updateBubbles() {
             buildingsData.forEach(b => {
                 const tile = document.getElementById(`tile-${b.tileId}`);
-                if (tile) {
-                    const bubble = tile.querySelector('.collect-bubble');
-                    if (bubble) {
-                        bubble.innerText = b.stored;
-                        bubble.style.display = b.stored > 0 ? 'block' : 'none';
-                    }
+                const bubble = tile?.querySelector('.collect-bubble');
+                if (bubble) {
+                    bubble.innerText = b.stored;
+                    bubble.style.display = b.stored > 0 ? 'block' : 'none';
                 }
             });
         }
@@ -288,55 +285,37 @@
             document.getElementById('elixir-val').innerText = resources.elixir;
         }
 
-        // --- CAMERA PANNING ---
-        viewport.addEventListener('mousedown', (e) => {
-            isPanning = true;
-            dragThreshold = false;
-            panStartX = e.clientX - currentX;
-            panStartY = e.clientY - currentY;
-            viewport.style.cursor = 'grabbing';
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isPanning) return;
-            dragThreshold = true;
-            currentX = e.clientX - panStartX;
-            currentY = e.clientY - panStartY;
-            updateWorldPos();
-        });
-
-        window.addEventListener('mouseup', () => {
-            isPanning = false;
-            viewport.style.cursor = 'grab';
-        });
-
-        function updateWorldPos() {
-            world.style.left = currentX + "px";
-            world.style.top = currentY + "px";
-        }
-
-        // --- DATA ---
-        function saveGame() {
-            set(ref(db, 'users/player1'), { resources, buildings: buildingsData });
-        }
+        // --- DATA & SHOP ---
+        function saveGame() { set(ref(db, 'users/player1'), { resources, buildings: buildingsData }); }
 
         function loadGame() {
             onValue(ref(db, 'users/player1'), (snap) => {
                 const d = snap.val();
                 if (d) {
-                    resources = d.resources;
-                    updateUI();
+                    resources = d.resources; updateUI();
                     if (d.buildings) {
                         buildingsData = d.buildings;
                         buildingsData.forEach(b => spawnBuilding(b.tileId, b.type, false));
                     }
-                } else {
-                    spawnBuilding(820, 'townhall1', true);
                 }
             }, { onlyOnce: true });
         }
 
-        // --- SHOP EVENTS ---
+        window.startIntro = () => {
+            document.getElementById('click-prompt').style.display = 'none';
+            document.getElementById('intro-audio').play();
+            setTimeout(() => {
+                document.getElementById('intro-0').classList.remove('active');
+                document.getElementById('intro-1').classList.add('active');
+                setTimeout(() => {
+                    document.getElementById('intro-overlay').classList.add('hidden');
+                    const bg = document.getElementById('bg-music');
+                    bg.src = "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3";
+                    bg.play();
+                }, 2500);
+            }, 2500);
+        };
+
         document.getElementById('shop-trigger').onclick = () => document.getElementById('shop-layer').style.display = 'flex';
         document.getElementById('close-shop').onclick = () => document.getElementById('shop-layer').style.display = 'none';
         document.querySelectorAll('.shop-item').forEach(item => {
@@ -346,7 +325,6 @@
             };
         });
 
-        // Initialize
         setupGrid();
         loadGame();
     </script>
