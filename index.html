@@ -3,36 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clash Remake</title>
+    <title>Clash Remake - Isometric</title>
     <style>
         body { 
             margin: 0; 
-            background: black; 
+            background: #2d4c1e; /* Grass green */
             overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
 
-        /* Positioned in the bottom right as requested */
+        /* The "World" container that tilts everything */
+        #map-container {
+            width: 2000px;
+            height: 2000px;
+            background-color: #4e7d34;
+            background-image: 
+                linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+            background-size: 50px 50px; /* This creates the building grid */
+            
+            /* The Magic "Fake 3D" Transform */
+            transform: rotateX(60deg) rotateZ(45deg);
+            transform-style: preserve-3d;
+            position: absolute;
+        }
+
+        /* Shop Button stays flat on the screen (UI Layer) */
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through to the map if needed */
+            z-index: 100;
+        }
+
         #shop-button {
             position: absolute;
             bottom: 20px;
             right: 20px;
-            width: 120px; /* Adjusted size for the new asset */
+            width: 120px;
             cursor: pointer;
-            z-index: 100;
+            pointer-events: auto;
             transition: transform 0.1s;
-            -webkit-tap-highlight-color: transparent;
         }
 
         #shop-button:active {
             transform: scale(0.9);
         }
+
+        /* Example of how a building would look */
+        .building {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: #8b4513; /* Brown box for now */
+            /* Undo the rotation for the building itself so it "stands up" */
+            transform: rotateZ(-45deg) rotateX(-60deg) translateY(-50px);
+            transform-origin: bottom;
+        }
     </style>
 </head>
 <body>
 
-    <a href="shop/shop.html">
-        <img id="shop-button" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" alt="Shop">
-    </a>
+    <div id="map-container">
+        <div class="building" style="top: 500px; left: 500px;"></div>
+    </div>
 
+    <div id="ui-layer">
+        <a href="shop/shop.html">
+            <img id="shop-button" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" alt="Shop">
+        </a>
+    </div>
+
+    <script>
+        // Basic drag-to-pan camera logic
+        let isDragging = false;
+        let startX, startY, scrollLeft, scrollTop;
+        const map = document.body;
+
+        map.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.pageX - map.offsetLeft;
+            startY = e.pageY - map.offsetTop;
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - map.offsetLeft;
+            const y = e.pageY - map.offsetTop;
+            window.scrollBy(startX - x, startY - y);
+        });
+    </script>
 </body>
 </html>
