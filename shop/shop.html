@@ -8,7 +8,7 @@
     <style>
         body {
             margin: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,20 +18,18 @@
             color: white;
         }
 
-        /* Main Shop Container */
         .shop-container {
             width: 98vw;
             height: 95vh;
-            background: #d3d7c6; /* Light gray-green background */
+            background: #d3d7c6; 
             border: 4px solid #1a1a1a;
             border-radius: 12px;
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
-        /* Top Icon Bar */
+        /* Top Nav Icons */
         .top-nav {
             background: #000;
             height: 60px;
@@ -67,19 +65,21 @@
             padding: 5px 12px;
             cursor: pointer;
             font-size: 20px;
+            z-index: 10;
         }
 
-        /* Category Tabs */
+        /* Tabs Section */
         .category-header {
             text-align: center;
             padding: 10px 0;
+            background: #d3d7c6;
         }
 
         .title-text {
             color: #333;
             font-size: 28px;
             text-shadow: 1px 1px #fff;
-            margin-bottom: 10px;
+            margin: 0 0 10px 0;
         }
 
         .sub-tabs {
@@ -99,22 +99,27 @@
 
         .tab.active {
             background: #84a95b;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
         }
 
-        /* Item Grid */
-        .item-list {
+        /* The Grid Area with the Color from your Screenshot */
+        .item-list-container {
             flex-grow: 1;
+            background-color: #3b2d38; /* The color from your uploaded image */
+            margin: 5px 10px;
+            border-radius: 8px;
+            border: 3px solid #1a1a1a;
             overflow-x: auto;
-            padding: 15px;
-            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
         }
 
         .grid {
             display: inline-grid;
             grid-template-rows: repeat(2, 1fr);
             grid-auto-flow: column;
-            gap: 12px;
+            gap: 10px;
+            padding: 15px;
         }
 
         /* Building Card */
@@ -122,52 +127,33 @@
             width: 170px;
             height: 200px;
             background: #8e8e8e;
-            border: 3px solid #444;
+            border: 3px solid #1a1a1a;
             border-radius: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
         }
 
         .card-header {
             font-size: 12px;
             margin-top: 5px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .info-i {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: #eee;
-            color: #333;
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            font-size: 12px;
-            text-align: center;
+            color: #fff;
+            text-shadow: 1px 1px #000;
         }
 
         .building-img {
-            width: 90px;
-            height: 90px;
-            margin: 15px 0;
+            width: 100px;
+            height: 100px;
+            margin-top: 10px;
             object-fit: contain;
-        }
-
-        .build-count {
-            position: absolute;
-            bottom: 45px;
-            right: 10px;
-            font-size: 12px;
         }
 
         .price-bar {
             width: 100%;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.4);
             position: absolute;
             bottom: 0;
             height: 40px;
@@ -179,7 +165,7 @@
             font-size: 18px;
         }
 
-        /* Bottom Resource Bar */
+        /* Bottom Resource Footer */
         .resource-footer {
             height: 50px;
             background: #84a95b;
@@ -188,6 +174,8 @@
             justify-content: center;
             align-items: center;
             gap: 40px;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
         }
 
         .res-item {
@@ -197,12 +185,14 @@
             text-shadow: 2px 2px #000;
         }
 
-        .res-item span { margin-left: 10px; }
-
-        /* Scrollbar */
-        .item-list::-webkit-scrollbar { height: 16px; }
-        .item-list::-webkit-scrollbar-track { background: #333; border-radius: 10px; margin: 0 40px; }
-        .item-list::-webkit-scrollbar-thumb { background: #84a95b; border: 2px solid #000; border-radius: 10px; }
+        /* Custom Scrollbar */
+        .item-list-container::-webkit-scrollbar { height: 12px; }
+        .item-list-container::-webkit-scrollbar-track { background: transparent; }
+        .item-list-container::-webkit-scrollbar-thumb { 
+            background: #84a95b; 
+            border: 2px solid #000; 
+            border-radius: 10px; 
+        }
     </style>
 </head>
 <body>
@@ -211,7 +201,8 @@
         <div class="close-btn" onclick="window.location.href='../index.html'">X</div>
 
         <div class="top-nav">
-            <div class="nav-icon active"></div> <div class="nav-icon"></div>
+            <div class="nav-icon active"></div>
+            <div class="nav-icon"></div>
             <div class="nav-icon"></div>
             <div class="nav-icon"></div>
         </div>
@@ -226,39 +217,40 @@
             </div>
         </div>
 
-        <div class="item-list">
+        <div class="item-list-container">
             <div class="grid">
                 <div class="card">
-                    <div class="info-i">i</div>
                     <div class="card-header">Army Camp</div>
                     <img src="../images/army_camp.png" class="building-img">
-                    <div class="build-count">Built: 2/2</div>
                     <div class="price-bar">200 💧</div>
                 </div>
-
                 <div class="card">
-                    <div class="info-i">i</div>
+                    <div class="card-header">Barracks</div>
+                    <img src="../images/barracks.png" class="building-img">
+                    <div class="price-bar">100 💧</div>
+                </div>
+                <div class="card">
                     <div class="card-header">Laboratory</div>
                     <img src="../images/laboratory.png" class="building-img">
-                    <div class="build-count">Built: 1/1</div>
                     <div class="price-bar">5 000 💧</div>
                 </div>
-
+                <div class="card">
+                    <div class="card-header">Spell Factory</div>
+                    <img src="../images/spell_factory.png" class="building-img">
+                    <div class="price-bar">150 000 💧</div>
+                </div>
                 <div class="card" style="border-color: #00e5ff;">
-                    <div class="info-i">i</div>
                     <div class="card-header">Builder's Hut</div>
                     <img src="../images/builders_hut.png" class="building-img">
-                    <div class="build-count">3/5</div>
                     <div class="price-bar" style="background: rgba(0, 229, 255, 0.2);">1 000 💎</div>
                 </div>
-
-                </div>
+            </div>
         </div>
 
         <div class="resource-footer">
-            <div class="res-item">🟡 <span>185 617</span></div>
-            <div class="res-item">💧 <span>192 079</span></div>
-            <div class="res-item">💎 <span>15</span></div>
+            <div class="res-item">🟡 185 617</div>
+            <div class="res-item">💧 192 079</div>
+            <div class="res-item">💎 15</div>
         </div>
     </div>
 
