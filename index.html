@@ -24,16 +24,6 @@
         }
         .res-icon { width: 35px; height: 35px; margin-left: 10px; }
 
-        /* --- INTRO --- */
-        #intro-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #000; z-index: 9999; cursor: pointer;
-            display: flex; justify-content: center; align-items: center;
-        }
-        #intro-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.8s ease-out; }
-        .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
-        .intro-img.active { display: block; }
-
         /* --- GAME ENGINE --- */
         #game-viewport { 
             width: 100vw; height: 100vh; 
@@ -85,7 +75,6 @@
             border: 2px solid #000; pointer-events: none; display: none;
         }
 
-        /* Responsive sizes for different shop items */
         .size-1x1 { width: 40px; height: 60px; }
         .size-2x2 { width: 80px; height: 120px; }
         .size-3x3 { width: 120px; height: 180px; }
@@ -101,6 +90,16 @@
         .shop-container { width: 90vw; height: 80vh; background: #d3d7c6; border: 4px solid #1a1a1a; border-radius: 12px; padding: 20px; overflow-y: auto; }
         .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 20px; justify-items: center; }
         .shop-item { cursor: pointer; text-align: center; color: black; background: rgba(255,255,255,0.3); padding: 10px; border-radius: 8px; border: 2px solid #000; width: 110px; font-size: 13px; }
+
+        /* --- INTRO --- */
+        #intro-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; z-index: 9999; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+        }
+        #intro-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.8s ease-out; }
+        .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
+        .intro-img.active { display: block; }
     </style>
 </head>
 <body>
@@ -115,6 +114,7 @@
         <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
     </div>
+
     <audio id="intro-audio" preload="auto"><source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg"></audio>
     <audio id="bg-music" loop></audio>
 
@@ -142,7 +142,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Config setup
         const firebaseConfig = {
             apiKey: "AIzaSyDtAQZBz45bfocaqj08uUXLfPL9vFScstc",
             authDomain: "clash-of-clans-4c664.firebaseapp.com",
@@ -159,13 +158,12 @@
         let buildingsData = []; 
         let selectedBuilding = null;
 
-        // Expanded Shop List
+        // Town Hall is REMOVED from the shop list
         const shopItems = [
             { id: 'gold_mine', name: 'Gold Mine', size: 'size-2x2' },
             { id: 'elixir_collector', name: 'Elixir Collector', size: 'size-2x2' },
             { id: 'gold_storage', name: 'Gold Storage', size: 'size-3x3' },
             { id: 'elixir_storage', name: 'Elixir Storage', size: 'size-3x3' },
-            { id: 'townhall1', name: 'Town Hall 1', size: 'size-4x4' },
             { id: 'barracks', name: 'Barracks', size: 'size-2x2' },
             { id: 'army_camp', name: 'Army Camp', size: 'size-4x4' },
             { id: 'cannon', name: 'Cannon', size: 'size-2x2' },
@@ -240,8 +238,13 @@
             const tile = document.getElementById(`tile-${tileId}`);
             if (!tile || tile.querySelector('.building-wrapper')) return;
 
-            const item = shopItems.find(s => s.id === type);
-            const sizeClass = item ? item.size : 'size-2x2';
+            // Handle TH size manually since it's not in shop list
+            let sizeClass = 'size-2x2';
+            if (type.includes('townhall')) sizeClass = 'size-4x4';
+            else {
+                const item = shopItems.find(s => s.id === type);
+                if (item) sizeClass = item.size;
+            }
 
             const wrapper = document.createElement('div');
             wrapper.className = `building-wrapper ${sizeClass}`;
@@ -279,12 +282,19 @@
         }
 
         function saveGame() { set(ref(db, 'users/player1'), { resources, buildings: buildingsData }); }
+        
         function loadGame() {
             onValue(ref(db, 'users/player1'), (snap) => {
                 const d = snap.val();
                 if (d) {
                     resources = d.resources; updateUI();
-                    if (d.buildings) { buildingsData = d.buildings; buildingsData.forEach(b => spawnBuilding(b.tileId, b.type, false)); }
+                    if (d.buildings) { 
+                        buildingsData = d.buildings; 
+                        buildingsData.forEach(b => spawnBuilding(b.tileId, b.type, false)); 
+                    }
+                } else {
+                    // NEW PLAYER: Auto-spawn Town Hall in the center (tile ~820)
+                    spawnBuilding(820, 'townhall1', true);
                 }
             }, { onlyOnce: true });
         }
