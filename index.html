@@ -29,42 +29,35 @@
             touch-action: none;
         }
 
-        /* Giant World Surface */
         #world-surface {
             position: absolute;
             width: 8000px; height: 8000px;
             will-change: transform;
         }
 
-        /* --- BACKGROUND LAYERING BY SCALE --- */
+        /* Huge Forest Scale (background2.png) */
         #forest-layer {
             position: absolute; width: 100%; height: 100%;
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* Huge background2.png tiles */
+            grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
             z-index: 1;
         }
+        .bg-forest { width: 100%; height: 100%; background-size: cover; filter: brightness(0.9); }
 
-        .bg-forest { 
-            width: 100%; height: 100%; 
-            background-size: cover;
-            filter: brightness(0.9);
-        }
-
-        /* Dirt Path Border - Slightly bigger than grass tiles */
+        /* Path Border Scale (background.png) */
         #path-border {
             position: absolute;
-            width: 3000px; height: 3000px;
+            width: 3200px; height: 3200px;
             left: 50%; top: 50%;
             transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
             display: grid;
-            grid-template-columns: repeat(20, 1fr); /* background.png tiles */
+            grid-template-columns: repeat(20, 1fr);
             z-index: 2;
         }
-
         .bg-path { width: 100%; height: 100%; background-size: cover; }
 
-        /* --- CENTRAL VILLAGE GRID --- */
+        /* Village Grid (Grass & background1.png) */
         #map-container {
             position: absolute;
             width: 2400px; height: 2400px; 
@@ -74,13 +67,11 @@
             z-index: 5;
             box-shadow: 0 0 100px rgba(0,0,0,0.5);
         }
-
         .grid-layer {
             position: absolute; width: 100%; height: 100%;
             display: grid;
-            grid-template-columns: repeat(40, 1fr); /* Tiny grass/background1.png tiles */
+            grid-template-columns: repeat(40, 1fr); 
         }
-
         .tile { width: 100%; height: 100%; background-size: cover; margin: -0.1px; }
         .tile:hover { filter: brightness(1.4); cursor: pointer; }
 
@@ -92,16 +83,16 @@
 <body onload="startIntroSequence()">
 
     <div id="intro-overlay">
-        <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
-        <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
+        <img id="intro-0" src="intro/intro.png" class="intro-img active">
+        <img id="intro-1" src="intro/intro1.png" class="intro-img">
     </div>
+
+    <audio id="intro-audio" preload="auto"><source src="audio/coc-intro.mp3" type="audio/mpeg"></audio>
 
     <div id="game-viewport">
         <div id="world-surface">
             <div id="forest-layer"></div>
-            
             <div id="path-border"></div>
-
             <div id="map-container">
                 <div id="grid-layer" class="grid-layer"></div>
             </div>
@@ -109,38 +100,37 @@
     </div>
 
     <div class="bottom-right-ui">
-        <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" class="shop-btn">
+        <img src="buttons/shop.png" class="shop-btn">
     </div>
 
     <script>
-        const rawBase = 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/';
-
-        // 1. Generate Huge Forest (background2.png)
+        // 1. Forest (Huge Scale)
         const forestLayer = document.getElementById('forest-layer');
         for (let i = 0; i < 16; i++) {
             const t = document.createElement('div');
             t.className = 'bg-forest';
-            t.style.backgroundImage = `url('${rawBase}background/background2.png?raw=true')`;
+            t.style.backgroundImage = "url('background/background2.png')";
             forestLayer.appendChild(t);
         }
 
-        // 2. Generate Dirt Path Border (background.png)
+        // 2. Path (Mid Scale)
         const pathBorder = document.getElementById('path-border');
         for (let i = 0; i < 400; i++) {
             const t = document.createElement('div');
             t.className = 'bg-path';
-            t.style.backgroundImage = `url('${rawBase}background/background.png?raw=true')`;
+            t.style.backgroundImage = "url('background/background.png')";
             pathBorder.appendChild(t);
         }
 
-        // 3. Generate Small Village Tiles (Grass + background1.png filler)
+        // 3. Village (Small Scale)
         const gridLayer = document.getElementById('grid-layer');
-        const smallAssets = ['grid/grass.png', 'background/background1.png'];
+        const grassVariations = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
         for (let i = 0; i < 1600; i++) {
             const t = document.createElement('div');
             t.className = 'tile';
-            const img = smallAssets[Math.random() > 0.9 ? 1 : 0]; // Mostly grass, some background1 filler
-            t.style.backgroundImage = `url('${rawBase}${img}${img.includes('grass') ? '' : '?raw=true'}')`;
+            // 10% chance to be the transition tile (background1), otherwise random grass
+            const img = Math.random() > 0.9 ? 'background/background1.png' : grassVariations[Math.floor(Math.random() * grassVariations.length)];
+            t.style.backgroundImage = `url('${img}')`;
             gridLayer.appendChild(t);
         }
 
@@ -171,6 +161,7 @@
         window.addEventListener('mouseup', () => isPanning = false);
 
         function startIntroSequence() {
+            document.getElementById('intro-audio').play().catch(() => {});
             setTimeout(() => {
                 document.getElementById('intro-0').classList.remove('active');
                 document.getElementById('intro-1').classList.add('active');
