@@ -12,7 +12,7 @@
             background-color: #051a02;
         }
 
-        /* --- INTRO SCREEN --- */
+        /* --- INTRO --- */
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; display: flex; justify-content: center;
@@ -22,72 +22,67 @@
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
-        /* --- GAME VIEWPORT --- */
+        /* --- THE WORLD --- */
         #game-viewport {
             width: 100vw; height: 100vh;
             position: relative; overflow: hidden;
             touch-action: none;
+            cursor: grab;
         }
+        #game-viewport:active { cursor: grabbing; }
 
         #world-surface {
             position: absolute;
             width: 8000px; height: 8000px;
-            will-change: transform;
+            pointer-events: none; /* Prevents background from stealing mouse focus */
         }
 
-        /* Huge Forest Scale (background2.png) */
+        /* Huge Forest (background2.png) */
         #forest-layer {
             position: absolute; width: 100%; height: 100%;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: grid; grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            z-index: 1;
         }
-        .bg-forest { width: 100%; height: 100%; background-size: cover; filter: brightness(0.9); }
+        .bg-forest { width: 100%; height: 100%; background-size: cover; filter: brightness(0.8); }
 
-        /* Path Border Scale (background.png) */
+        /* Dirt Path (background.png) - Now strictly BEHIND the grid */
         #path-border {
-            position: absolute;
-            width: 3200px; height: 3200px;
+            position: absolute; width: 3200px; height: 3200px;
             left: 50%; top: 50%;
             transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
-            display: grid;
-            grid-template-columns: repeat(20, 1fr);
-            z-index: 2;
+            display: grid; grid-template-columns: repeat(20, 1fr);
         }
         .bg-path { width: 100%; height: 100%; background-size: cover; }
 
-        /* Village Grid (Grass & background1.png) */
+        /* Village Grid */
         #map-container {
-            position: absolute;
-            width: 2400px; height: 2400px; 
+            position: absolute; width: 2400px; height: 2400px; 
             left: 50%; top: 50%;
             transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
-            z-index: 5;
-            box-shadow: 0 0 100px rgba(0,0,0,0.5);
+            pointer-events: auto; /* Only the grid and viewport handle clicks */
         }
         .grid-layer {
-            position: absolute; width: 100%; height: 100%;
-            display: grid;
-            grid-template-columns: repeat(40, 1fr); 
+            display: grid; grid-template-columns: repeat(40, 1fr); 
+            width: 100%; height: 100%;
         }
         .tile { width: 100%; height: 100%; background-size: cover; margin: -0.1px; }
-        .tile:hover { filter: brightness(1.4); cursor: pointer; }
+        .tile:hover { filter: brightness(1.3); }
 
         /* UI */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 100; }
         .shop-btn { width: 120px; cursor: pointer; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); }
     </style>
 </head>
-<body onload="startIntroSequence()">
+<body onload="initGame()">
 
-    <div id="intro-overlay">
+    <div id="intro-overlay" onclick="startSequence()">
+        <p id="click-prompt" style="color:white; z-index:10000;">CLICK TO START</p>
         <img id="intro-0" src="intro/intro.png" class="intro-img active">
         <img id="intro-1" src="intro/intro1.png" class="intro-img">
     </div>
 
-    <audio id="intro-audio" preload="auto"><source src="audio/coc-intro.mp3" type="audio/mpeg"></audio>
+    <audio id="intro-audio"><source src="audio/coc-intro.mp3" type="audio/mpeg"></audio>
 
     <div id="game-viewport">
         <div id="world-surface">
@@ -104,37 +99,52 @@
     </div>
 
     <script>
-        // 1. Forest (Huge Scale)
-        const forestLayer = document.getElementById('forest-layer');
-        for (let i = 0; i < 16; i++) {
-            const t = document.createElement('div');
-            t.className = 'bg-forest';
-            t.style.backgroundImage = "url('background/background2.png')";
-            forestLayer.appendChild(t);
+        function initGame() {
+            // Setup Forest
+            const forest = document.getElementById('forest-layer');
+            for(let i=0; i<16; i++) {
+                const d = document.createElement('div');
+                d.className = 'bg-forest';
+                d.style.backgroundImage = "url('background/background2.png')";
+                forest.appendChild(d);
+            }
+            // Setup Path
+            const path = document.getElementById('path-border');
+            for(let i=0; i<400; i++) {
+                const d = document.createElement('div');
+                d.className = 'bg-path';
+                d.style.backgroundImage = "url('background/background.png')";
+                path.appendChild(d);
+            }
+            // Setup Village
+            const grid = document.getElementById('grid-layer');
+            const grass = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
+            for(let i=0; i<1600; i++) {
+                const t = document.createElement('div');
+                t.className = 'tile';
+                const img = Math.random() > 0.95 ? 'background/background1.png' : grass[Math.floor(Math.random()*grass.length)];
+                t.style.backgroundImage = `url('${img}')`;
+                grid.appendChild(t);
+            }
         }
 
-        // 2. Path (Mid Scale)
-        const pathBorder = document.getElementById('path-border');
-        for (let i = 0; i < 400; i++) {
-            const t = document.createElement('div');
-            t.className = 'bg-path';
-            t.style.backgroundImage = "url('background/background.png')";
-            pathBorder.appendChild(t);
+        // --- FIXED AUDIO & INTRO ---
+        function startSequence() {
+            document.getElementById('click-prompt').style.display = 'none';
+            const audio = document.getElementById('intro-audio');
+            audio.play().catch(e => console.log("Audio need click"));
+            
+            setTimeout(() => {
+                document.getElementById('intro-0').classList.remove('active');
+                document.getElementById('intro-1').classList.add('active');
+                setTimeout(() => {
+                    document.getElementById('intro-overlay').classList.add('hidden');
+                }, 2000);
+            }, 2000);
         }
 
-        // 3. Village (Small Scale)
-        const gridLayer = document.getElementById('grid-layer');
-        const grassVariations = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
-        for (let i = 0; i < 1600; i++) {
-            const t = document.createElement('div');
-            t.className = 'tile';
-            // 10% chance to be the transition tile (background1), otherwise random grass
-            const img = Math.random() > 0.9 ? 'background/background1.png' : grassVariations[Math.floor(Math.random() * grassVariations.length)];
-            t.style.backgroundImage = `url('${img}')`;
-            gridLayer.appendChild(t);
-        }
-
-        // --- CAMERA PANNING ---
+        // --- STABLE PANNING ---
+        const viewport = document.getElementById('game-viewport');
         const world = document.getElementById('world-surface');
         let isPanning = false;
         let startX, startY;
@@ -144,7 +154,7 @@
         world.style.left = currentX + "px";
         world.style.top = currentY + "px";
 
-        document.getElementById('game-viewport').addEventListener('mousedown', (e) => {
+        viewport.addEventListener('mousedown', (e) => {
             isPanning = true;
             startX = e.clientX - currentX;
             startY = e.clientY - currentY;
@@ -159,17 +169,6 @@
         });
 
         window.addEventListener('mouseup', () => isPanning = false);
-
-        function startIntroSequence() {
-            document.getElementById('intro-audio').play().catch(() => {});
-            setTimeout(() => {
-                document.getElementById('intro-0').classList.remove('active');
-                document.getElementById('intro-1').classList.add('active');
-                setTimeout(() => {
-                    document.getElementById('intro-overlay').classList.add('hidden');
-                }, 2000);
-            }, 2000);
-        }
     </script>
 </body>
 </html>
