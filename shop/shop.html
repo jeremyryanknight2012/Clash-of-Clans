@@ -130,12 +130,7 @@
             align-items: center;
             position: relative;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-        }
-
-        /* Style for cards you can't build */
-        .card.locked {
-            filter: grayscale(0.8);
-            opacity: 0.9;
+            overflow: hidden; /* Ensures the full PNG stays inside the borders */
         }
 
         .card-header {
@@ -145,10 +140,17 @@
         }
 
         .building-img {
-            width: 120px; /* Slightly larger to show the full CoC tile style */
-            height: 90px;
-            margin-top: 5px;
+            width: 75px;
+            height: 75px;
+            margin-top: 8px;
             object-fit: contain;
+        }
+
+        /* Specialized style for the full-image Army Camp card */
+        .full-png-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .price-bar {
@@ -210,10 +212,8 @@
 
         <div class="item-list-container">
             <div class="grid">
-                <div class="card locked">
-                    <div class="card-header">Army camp</div>
-                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true" class="building-img">
-                    <div class="price-bar">Full</div>
+                <div class="card">
+                    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/army-camp-no-build.png?raw=true" class="full-png-img">
                 </div>
 
                 <div class="card"><div class="card-header">Barracks</div><img src="../images/barracks.png" class="building-img"><div class="price-bar">100 💧</div></div>
