@@ -29,14 +29,14 @@
         }
         .res-icon { width: 35px; height: 35px; margin-left: 10px; }
 
-        /* --- THE INTRO (WAITING FOR FIRST INTERACTION) --- */
+        /* --- INSTANT INTRO --- */
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; z-index: 9999; cursor: pointer;
         }
         #intro-overlay.hidden { display: none; }
-        .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
-        .intro-img.active { display: block; }
+        .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; opacity: 0; transition: opacity 0.3s; }
+        .intro-img.active { display: block; opacity: 1; }
 
         /* --- MAP ENGINE --- */
         #game-viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
@@ -98,12 +98,12 @@
     </div>
 
     <div id="intro-overlay">
-        <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active">
+        <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img">
         <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img">
     </div>
 
     <audio id="bg-music"></audio>
-    <audio id="intro-audio"><source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg"></audio>
+    <audio id="intro-audio" preload="auto"><source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg"></audio>
 
     <div id="game-viewport">
         <div id="map-container">
@@ -156,6 +156,7 @@
         let startX, startY;
 
         const bgMusic = document.getElementById('bg-music');
+        const introAudio = document.getElementById('intro-audio');
         const playlist = [
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
@@ -166,10 +167,9 @@
             initGrid();
             loadGame(); 
             
-            // First click on the black screen triggers everything
-            document.getElementById('intro-overlay').addEventListener('click', function startGame() {
-                this.removeEventListener('click', startGame);
-                document.getElementById('intro-audio').play();
+            // INSTANT AUDIO TRIGGER
+            document.getElementById('intro-overlay').addEventListener('click', function() {
+                introAudio.play(); // Play sound immediately on click
                 startIntroSequence();
             }, { once: true });
 
@@ -189,18 +189,17 @@
             const intro1 = document.getElementById('intro-1');
             const overlay = document.getElementById('intro-overlay');
 
-            intro0.style.display = 'block'; // Show first image immediately
+            // Show first image instantly with the sound
+            intro0.classList.add('active');
 
             setTimeout(() => {
                 intro0.classList.remove('active');
-                intro0.style.display = 'none';
                 intro1.classList.add('active');
-                intro1.style.display = 'block';
                 setTimeout(() => {
                     overlay.classList.add('hidden');
                     playNextTrack();
-                }, 3000); 
-            }, 3000);
+                }, 3200); 
+            }, 3200);
         }
 
         function initGrid() {
