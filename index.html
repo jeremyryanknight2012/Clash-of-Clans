@@ -65,7 +65,16 @@
             z-index: 10;
         }
 
-        .shop-btn { width: 100px; cursor: pointer; }
+        .shop-btn { 
+            width: 120px; /* Slightly larger to show off that clean PNG */
+            cursor: pointer;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
+            transition: transform 0.1s;
+        }
+
+        .shop-btn:active {
+            transform: scale(0.9);
+        }
 
         /* --- SHOP LAYER --- */
         #shop-layer {
@@ -103,11 +112,39 @@
             border-radius: 5px;
             padding: 5px 12px;
             cursor: pointer;
+            z-index: 101;
         }
 
-        .item-list-container { flex-grow: 1; background-color: #3b2d38; margin: 10px; border-radius: 8px; border: 3px solid #1a1a1a; overflow-x: auto; display: flex; align-items: center; }
-        .grid { display: inline-grid; grid-template-rows: repeat(2, 1fr); grid-auto-flow: column; gap: 8px; padding: 10px; height: calc(100% - 20px); }
-        .card { width: 130px; height: 160px; background: #8e8e8e; border: 3px solid #1a1a1a; border-radius: 10px; overflow: hidden; position: relative; }
+        .item-list-container { 
+            flex-grow: 1; 
+            background-color: #3b2d38; 
+            margin: 10px; 
+            border-radius: 8px; 
+            border: 3px solid #1a1a1a; 
+            overflow-x: auto; 
+            display: flex; 
+            align-items: center; 
+        }
+
+        .grid { 
+            display: inline-grid; 
+            grid-template-rows: repeat(2, 1fr); 
+            grid-auto-flow: column; 
+            gap: 8px; 
+            padding: 10px; 
+            height: calc(100% - 20px); 
+        }
+
+        .card { 
+            width: 130px; 
+            height: 160px; 
+            background: #8e8e8e; 
+            border: 3px solid #1a1a1a; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            position: relative; 
+        }
+
         .full-png-img { width: 100%; height: 100%; object-fit: fill; }
         .building-img { width: 75px; height: 75px; margin-top: 8px; object-fit: contain; }
         .price-bar { width: 100%; background: rgba(0,0,0,0.4); position: absolute; bottom: 0; height: 35px; display: flex; justify-content: center; align-items: center; }
@@ -127,9 +164,13 @@
     <audio id="bg-music" preload="auto"></audio>
 
     <div id="game-canvas">
-        <h1>Village Map</h1>
+        <h1 style="color: white; text-shadow: 2px 2px #000;">Village Map</h1>
+        
         <div class="bottom-right-ui">
-            <img src="buttons/shop_btn.png" class="shop-btn" onclick="toggleShop(true)">
+            <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true" 
+                 class="shop-btn" 
+                 onclick="toggleShop(true)" 
+                 alt="Shop">
         </div>
     </div>
 
@@ -145,7 +186,7 @@
                         <img src="images/barracks.png" class="building-img">
                         <div class="price-bar">100 💧</div>
                     </div>
-                </div>
+                    </div>
             </div>
         </div>
     </div>
@@ -154,31 +195,32 @@
         // Playlist Configuration
         const playlist = [
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
-            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3", // Part 1 again as requested
+            "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3",
             "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/afzirkav/06.%20Home%20Music%20Part%203.mp3"
         ];
         
         let currentTrack = 0;
         const bgMusic = document.getElementById('bg-music');
+        const introAudio = document.getElementById('intro-audio');
 
         function startIntroSequence() {
             const overlay = document.getElementById('intro-overlay');
             const intro0 = document.getElementById('intro-0');
             const intro1 = document.getElementById('intro-1');
-            const introAudio = document.getElementById('intro-audio');
 
+            // Play Intro Sound
             introAudio.volume = 1.0;
-            introAudio.play().catch(e => console.log("Audio waiting for interaction."));
+            introAudio.play().catch(e => console.log("Audio waiting for user interaction."));
 
-            // Stage 1 to Stage 2 transition
+            // Supercell Screen (2 seconds)
             setTimeout(() => {
                 intro0.classList.remove('active');
                 intro1.classList.add('active');
 
-                // Finish Intro and Start Background Music
+                // Loading Screen (3 seconds)
                 setTimeout(() => {
                     overlay.classList.add('hidden');
-                    playNextTrack(); // Start the loop
+                    playNextTrack(); // Start the main game music loop
                 }, 3000);
 
             }, 2000);
@@ -186,13 +228,13 @@
 
         function playNextTrack() {
             bgMusic.src = playlist[currentTrack];
-            bgMusic.play().catch(e => console.log("BG Music waiting for interaction."));
+            bgMusic.play().catch(e => console.log("Music blocked - click screen to enable."));
             
-            // Prepare for next song
+            // Loop logic: 0 -> 1 -> 2 -> reset to 0
             currentTrack = (currentTrack + 1) % playlist.length;
         }
 
-        // When a song ends, play the next one automatically
+        // Seamless transition when song finishes
         bgMusic.onended = function() {
             playNextTrack();
         };
