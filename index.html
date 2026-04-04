@@ -11,7 +11,6 @@
             overflow: hidden; font-family: 'Luckiest Guy', cursive;
             background-color: #0e3d06;
             user-select: none;
-            cursor: default !important;
         }
 
         #world-bg {
@@ -21,19 +20,21 @@
             z-index: -1; 
         }
 
+        /* --- INTRO SCREEN --- */
         #intro-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; display: flex; justify-content: center;
             align-items: center; z-index: 9999;
-            transition: opacity 1s;
-            pointer-events: none; /* Let the intro play without blocking initial load */
+            transition: opacity 1s ease-out;
         }
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
+        /* --- THE MAP --- */
         #game-viewport {
             width: 100vw; height: 100vh;
             position: relative; overflow: hidden;
+            cursor: default;
         }
 
         #map-container {
@@ -41,7 +42,6 @@
             width: 2400px; height: 2400px; 
             transform: rotateX(60deg) rotateZ(-45deg);
             transform-style: preserve-3d;
-            will-change: transform;
         }
 
         .grid-layer {
@@ -56,9 +56,10 @@
             background-size: cover;
             position: relative;
             transform-style: preserve-3d;
-            pointer-events: auto !important; /* FORCED CLICKABILITY */
+            pointer-events: auto;
         }
 
+        /* --- THE BUILDING --- */
         .building {
             position: absolute;
             bottom: 15%; left: 50%;
@@ -68,7 +69,7 @@
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
             transform-origin: bottom center;
             z-index: 100;
-            pointer-events: none; 
+            pointer-events: none; /* Let clicks go through to the tile */
             filter: drop-shadow(5px 10px 5px rgba(0,0,0,0.4));
         }
 
@@ -76,6 +77,7 @@
         .size-3x3 { width: 300%; height: 450%; } 
         .size-2x2 { width: 200%; height: 300%; }
 
+        /* --- UI --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         .shop-btn { width: 120px; cursor: pointer; }
 
@@ -84,10 +86,7 @@
             background: rgba(0, 0, 0, 0.7); z-index: 2000;
             justify-content: center; align-items: center;
         }
-        .shop-container { 
-            width: 80vw; height: 60vh; background: #d3d7c6; 
-            border: 4px solid #1a1a1a; padding: 20px; border-radius: 15px; 
-        }
+        .shop-container { width: 80vw; height: 60vh; background: #d3d7c6; border: 4px solid #1a1a1a; padding: 20px; border-radius: 15px; }
     </style>
 </head>
 <body onload="initVillage(); startIntro();">
@@ -99,7 +98,7 @@
         <img id="intro-1" src="intro/intro1.png" class="intro-img">
     </div>
 
-    <audio id="intro-audio"><source src="audio/coc-intro.mp3" type="audio/mpeg"></audio>
+    <audio id="music-player"></audio>
 
     <div id="game-viewport">
         <div id="map-container">
@@ -131,15 +130,24 @@
         let mapX = (window.innerWidth/2)-1200;
         let mapY = (window.innerHeight/2)-800;
         
-        // Track mouse movement to separate click from drag
-        let dragThreshold = 5;
-        let mouseMoved = false;
+        // --- MUSIC PLAYLIST ---
+        const playlist = ['audio/coc-intro.mp3', 'audio/game1.mp3', 'audio/game2.mp3'];
+        let currentTrack = 0;
+        const audio = document.getElementById('music-player');
 
-        const viewport = document.getElementById('game-viewport');
-        const map = document.getElementById('map-container');
-        const gridLayer = document.getElementById('grid-layer');
+        audio.onended = () => {
+            currentTrack = (currentTrack + 1) % playlist.length;
+            playTrack(currentTrack);
+        };
 
+        function playTrack(index) {
+            audio.src = playlist[index];
+            audio.play().catch(e => console.log("Audio waiting for user interaction"));
+        }
+
+        // --- GRID & BUILDING ---
         function initVillage() {
+            const grid = document.getElementById('grid-layer');
             const grass = ['grid/grass.png', 'grid/grass1.png', 'grid/grass2.png', 'grid/grass3.png', 'grid/grass4.png'];
             
             for (let i = 0; i < 1600; i++) {
@@ -148,22 +156,20 @@
                 tile.id = `tile-${i}`;
                 tile.dataset.index = i;
                 tile.style.backgroundImage = `url('${grass[Math.floor(Math.random()*grass.length)]}')`;
-                
-                // Add click directly to tiles
-                tile.addEventListener('click', function(e) {
-                    if (mouseMoved) return; // Don't build if we were dragging
-                    
-                    if (selectedType) {
-                        spawnBuilding(this.dataset.index, selectedType, '3x3');
-                        selectedType = null;
-                        document.body.style.cursor = 'default';
-                    }
-                });
-                
-                gridLayer.appendChild(tile);
+                grid.appendChild(tile);
             }
 
-            // Spawn static starters
+            // Centralized click listener
+            window.addEventListener('click', (e) => {
+                if (isDragging) return;
+                const tile = e.target.closest('.tile');
+                if (tile && selectedType) {
+                    spawnBuilding(tile.dataset.index, selectedType, '3x3');
+                    selectedType = null;
+                    document.body.style.cursor = 'default';
+                }
+            });
+
             spawnBuilding(820, 'townhall', '4x4', 1);
             spawnBuilding(738, 'builder_hut', '2x2');
             spawnBuilding(743, 'gold_mine', '2x2');
@@ -181,59 +187,42 @@
         }
 
         // --- CAMERA PANNING ---
-        map.style.left = mapX + "px"; 
-        map.style.top = mapY + "px";
+        const map = document.getElementById('map-container');
+        map.style.left = mapX + "px"; map.style.top = mapY + "px";
 
         window.addEventListener('mousedown', (e) => {
-            mDown = true;
-            mouseMoved = false;
-            startX = e.clientX - mapX;
-            startY = e.clientY - mapY;
+            if(e.target.closest('#map-container')) {
+                mDown = true; isDragging = false;
+                startX = e.clientX - mapX; startY = e.clientY - mapY;
+            }
         });
 
         window.addEventListener('mousemove', (e) => {
             if (!mDown) return;
-            
-            let newX = e.clientX - startX;
-            let newY = e.clientY - startY;
-
-            // If the mouse moves beyond threshold, mark as drag
-            if (Math.abs(newX - mapX) > dragThreshold || Math.abs(newY - mapY) > dragThreshold) {
-                mouseMoved = true;
-                isDragging = true;
-            }
-
-            mapX = newX;
-            mapY = newY;
-            map.style.left = mapX + "px";
-            map.style.top = mapY + "px";
+            let moveX = e.clientX - startX;
+            let moveY = e.clientY - startY;
+            if (Math.abs(moveX - mapX) > 5) isDragging = true;
+            mapX = moveX; mapY = moveY;
+            map.style.left = mapX + "px"; map.style.top = mapY + "px";
         });
 
-        window.addEventListener('mouseup', () => {
-            mDown = false;
-            setTimeout(() => { isDragging = false; }, 10); // Short delay to prevent click firing
-        });
+        window.addEventListener('mouseup', () => mDown = false);
 
+        // --- INTRO SEQUENCE ---
         function startIntro() {
+            playTrack(0);
             const overlay = document.getElementById('intro-overlay');
-            const audio = document.getElementById('intro-audio');
-            
-            audio.play().catch(() => {
-                window.addEventListener('mousedown', () => audio.play(), {once: true});
-            });
-            
             setTimeout(() => {
                 document.getElementById('intro-0').classList.remove('active');
                 document.getElementById('intro-1').classList.add('active');
                 setTimeout(() => {
                     overlay.style.opacity = '0';
-                    setTimeout(() => overlay.remove(), 1000);
+                    setTimeout(() => overlay.remove(), 1000); // Fully delete the blocker
                 }, 2000);
             }, 2000);
         }
 
         function toggleShop(s) { document.getElementById('shop-layer').style.display = s ? 'flex' : 'none'; }
-        
         function selectBuilding(t) { 
             selectedType = t; 
             toggleShop(false); 
