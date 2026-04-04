@@ -24,8 +24,12 @@
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; display: flex; justify-content: center;
             align-items: center; z-index: 9999;
+            transition: opacity 0.8s ease-out;
         }
-        #intro-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.8s ease-out; }
+        #intro-overlay.hidden { 
+            opacity: 0; 
+            pointer-events: none; /* THIS FIXES THE CLICKING ISSUE */
+        }
         .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
         .intro-img.active { display: block; }
 
@@ -33,7 +37,9 @@
         #game-viewport {
             width: 100vw; height: 100vh;
             position: relative; overflow: hidden;
+            cursor: grab;
         }
+        #game-viewport:active { cursor: grabbing; }
 
         #map-container {
             position: absolute;
@@ -59,12 +65,12 @@
         /* --- THE BUILDING --- */
         .building {
             position: absolute;
-            bottom: 20%; 
+            bottom: 15%; 
             left: 50%;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: bottom center;
-            /* Corrected Isometric Stand-up */
+            /* Stands the PNG up vertically */
             transform: translate(-50%, 0) rotateZ(45deg) rotateX(-90deg);
             transform-origin: bottom center;
             pointer-events: auto;
@@ -72,21 +78,24 @@
             filter: drop-shadow(5px 10px 5px rgba(0,0,0,0.4));
         }
 
-        /* Size Variants */
         .size-4x4 { width: 400%; height: 600%; } 
-        .size-3x3 { width: 300%; height: 450%; } /* Army Camp size */
+        .size-3x3 { width: 300%; height: 450%; } 
         .size-2x2 { width: 200%; height: 300%; }
 
         /* --- UI --- */
         .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
-        .shop-btn { width: 120px; cursor: pointer; }
+        .shop-btn { width: 120px; cursor: pointer; transition: transform 0.1s; }
+        .shop-btn:active { transform: scale(0.9); }
 
         #shop-layer {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7); z-index: 2000;
             justify-content: center; align-items: center;
         }
-        .shop-container { width: 80vw; height: 60vh; background: #d3d7c6; border: 4px solid #1a1a1a; padding: 20px; border-radius: 15px; }
+        .shop-container { 
+            width: 80vw; height: 60vh; background: #d3d7c6; 
+            border: 4px solid #1a1a1a; padding: 20px; border-radius: 15px; 
+        }
     </style>
 </head>
 <body onload="initVillage(); startIntro();">
@@ -112,9 +121,9 @@
 
     <div id="shop-layer">
         <div class="shop-container">
-            <button onclick="toggleShop(false)">CLOSE</button>
+            <button style="float:right;" onclick="toggleShop(false)">CLOSE</button>
             <h2 style="text-align:center; color:black;">SHOP</h2>
-            <div style="display:flex; gap:20px; justify-content:center;">
+            <div style="display:flex; gap:20px; justify-content:center; margin-top:50px;">
                 <div onclick="selectBuilding('army_camp')" style="cursor:pointer; color:black; text-align:center;">
                     <img src="shop/army_camp.png" width="80"><br>Army Camp
                 </div>
@@ -125,6 +134,7 @@
     <script>
         let isDragging = false;
         let selectedType = null;
+        let mDown = false;
 
         function initVillage() {
             const grid = document.getElementById('grid-layer');
@@ -136,10 +146,10 @@
                 tile.id = `tile-${i}`;
                 tile.style.backgroundImage = `url('${grass[Math.floor(Math.random()*grass.length)]}')`;
                 
-                tile.onclick = () => {
+                tile.onclick = (e) => {
                     if (isDragging) return;
                     if (selectedType) {
-                        spawnBuilding(i, selectedType, '3x3'); // Camps are 3x3
+                        spawnBuilding(i, selectedType, '3x3'); 
                         selectedType = null;
                     }
                 };
@@ -179,33 +189,40 @@
             }
         }
 
-        // --- CAMERA ---
+        // --- CAMERA PANNING ---
         const map = document.getElementById('map-container');
-        let mDown = false, startX, startY;
+        let startX, startY;
         let mapX = (window.innerWidth/2)-1200, mapY = (window.innerHeight/2)-800;
         map.style.left = mapX+"px"; map.style.top = mapY+"px";
 
-        window.onmousedown = (e) => { mDown = true; isDragging = false; startX = e.clientX-mapX; startY = e.clientY-mapY; };
+        window.onmousedown = (e) => { 
+            mDown = true; 
+            isDragging = false; 
+            startX = e.clientX-mapX; 
+            startY = e.clientY-mapY; 
+        };
         window.onmousemove = (e) => { 
             if(!mDown) return; 
             isDragging = true; 
-            mapX = e.clientX-startX; mapY = e.clientY-startY;
-            map.style.left = mapX+"px"; map.style.top = mapY+"px";
+            mapX = e.clientX-startX; 
+            mapY = e.clientY-startY;
+            map.style.left = mapX+"px"; 
+            map.style.top = mapY+"px";
         };
         window.onmouseup = () => mDown = false;
 
         function startIntro() {
             const audio = document.getElementById('intro-audio');
-            // Browser might still require a click for audio, but we'll try auto-play
             audio.play().catch(() => {
-                console.log("Autoplay blocked. Audio will start on first map click.");
                 window.addEventListener('mousedown', () => audio.play(), {once: true});
             });
             
             setTimeout(() => {
                 document.getElementById('intro-0').classList.remove('active');
                 document.getElementById('intro-1').classList.add('active');
-                setTimeout(() => document.getElementById('intro-overlay').classList.add('hidden'), 2000);
+                setTimeout(() => {
+                    document.getElementById('intro-overlay').classList.add('hidden');
+                }, 2000);
             }, 2000);
         }
 
