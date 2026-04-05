@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clash of Clans Clone</title>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: 'Luckiest Guy', cursive;
+            background-color: #051a02;
+            user-select: none;
+        }
+
+        /* ── RESOURCE BAR ── */
+        #resource-bar {
+            position: fixed; top: 10px; right: 10px;
+            display: flex; flex-direction: column; gap: 8px;
+            z-index: 1000; align-items: flex-end;
+        }
+        .res-item {
+            background: rgba(0,0,0,0.65);
+            border: 2px solid #555; border-radius: 20px;
+            display: flex; align-items: center;
+            padding: 4px 14px; min-width: 160px;
+            justify-content: space-between;
+            color: #fff; font-size: 18px;
+            text-shadow: 2px 2px #000;
+        }
+        .res-icon { width: 32px; height: 32px; margin-left: 10px; }
+
+        /* ── VIEWPORT / WORLD ── */
+        #game-viewport {
+            width: 100vw; height: 100vh;
+            position: relative; overflow: hidden;
+            cursor: grab;
+        }
+        #game-viewport.grabbing { cursor: grabbing; }
+
+        /*
+         * world-surface holds BOTH the isometric map AND the building layer.
+         * Pan (left/top) + zoom (transform: scale) applied here so buildings
+         * scale with the world automatically — no separate screen-space overlay.
+         */
+        #world-surface {
+            position: absolute;
+            width: 5000px; height: 5000px;
+            will-change: transform;
+            transform-origin: 0 0;
+        }
+
+        /* ── ISOMETRIC MAP ── */
+        #map-container {
+            position: absolute;
+            width: 2400px; height: 2400px;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%) rotateX(60deg) rotateZ(-45deg);
+            transform-style: preserve-3d;
+        }
+
+        #grid-layer {
+            position: absolute; width: 100%; height: 100%;
+            display: grid;
+            grid-template-columns: repeat(40, 1fr);
+            grid-template-rows: repeat(40, 1fr);
+        }
+
+        .tile {
+            width: 100%; height: 100%;
+            position: relative;
+            background-size: cover;
+            cursor: pointer;
+            transition: filter 0.1s;
+        }
+        .tile:hover { filter: brightness(1.25); }
+        .tile.placing-mode:hover { filter: brightness(1.4) sepia(0.4) hue-rotate(60deg); }
+
+        /* ── BUILDING LAYER (inside world-surface) ── */
+        #building-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 5000px; height: 5000px;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .building-wrapper {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: auto;
+            transform: translate(-50%, -100%);
+            cursor: pointer;
+        }
+
+        .collect-bubble {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 4px;
+            animation: bobble 1.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .collect-bubble.visible { display: flex; }
+        .collect-bubble img {
+            width: 40px; height: 40px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+        }
+        @keyframes bobble {
+            0%,100% { transform: translateY(0px); }
+            50%      { transform: translateY(-5px); }
+        }
+
+        .building-canvas {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            object-position: bottom center;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+        }
+
+        .size-1x1 { width: 52px;  height: 52px;  }
+        .size-2x2 { width: 100px; height: 100px; }
+        .size-3x3 { width: 140px; height: 140px; }
+        .size-4x4 { width: 180px; height: 180px; }
+
+        /* ── PLACEMENT HINT ── */
+        #placement-cursor {
+            position: fixed; bottom: 80px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,200,0,0.9);
+            color: #000; border: 2px solid #000;
+            border-radius: 12px; padding: 6px 18px;
+            font-size: 16px; z-index: 2000;
+            display: none; pointer-events: none;
+        }
+
+        /* ── SHOP BUTTON ── */
+        .bottom-right-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+        .shop-btn {
+            width: 110px; cursor: pointer;
+            filter: drop-shadow(2px 4px 8px rgba(0,0,0,0.6));
+            transition: transform 0.1s;
+        }
+        .shop-btn:hover { transform: scale(1.05); }
+
+        /* ══════════════════════════════════════════
+           SHOP — CoC bottom-sheet style
+        ══════════════════════════════════════════ */
+        #shop-layer {
+            display: none;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            align-items: flex-end;
+        }
+        #shop-layer.open { display: flex; }
+
+        .shop-panel {
+            width: 100%;
+            height: 68vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #2b1900 0%, #180f00 100%);
+            border-top: 3px solid #8b5e1a;
+            border-radius: 18px 18px 0 0;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.85);
+            overflow: hidden;
+            animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity:0; }
+            to   { transform: translateY(0);    opacity:1; }
+        }
+
+        /* Drag handle + close */
+        .shop-topbar {
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px 20px 6px;
+            position: relative;
+            border-bottom: 1px solid rgba(255,180,40,0.12);
+        }
+        .shop-topbar::before {
+            content: '';
+            width: 36px; height: 4px;
+            background: rgba(255,180,60,0.25);
+            border-radius: 2px;
+        }
+        .shop-close-x {
+            position: absolute; right: 14px; top: 8px;
+            background: rgba(0,0,0,0.55);
+            border: 2px solid rgba(255,160,40,0.3);
+            border-radius: 50%;
+            width: 30px; height: 30px;
+            color: #ffd070; font-size: 13px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-family: 'Luckiest Guy', cursive;
+            transition: background 0.15s;
+        }
+        .shop-close-x:hover { background: rgba(200,40,40,0.7); border-color: #ff6060; }
+
+        /* Category pills */
+        .shop-cats {
+            flex-shrink: 0;
+            display: flex; gap: 8px;
+            padding: 10px 14px 8px;
+            overflow-x: auto;
+        }
+        .shop-cats::-webkit-scrollbar { display: none; }
+        .shop-cat {
+            flex-shrink: 0;
+            padding: 5px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #b08040;
+            background: rgba(255,255,255,0.04);
+            border: 2px solid rgba(255,150,30,0.18);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+        .shop-cat:hover { border-color: #d08020; color: #ffd080; }
+        .shop-cat.active {
+            background: linear-gradient(180deg, #b86800, #7a3e00);
+            border-color: #e8a020;
+            color: #fff8d0;
+            box-shadow: 0 2px 10px rgba(200,110,0,0.45);
+        }
+
+        /* Scrollable card area */
+        .shop-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 12px 24px;
+        }
+        .shop-scroll::-webkit-scrollbar { width: 4px; }
+        .shop-scroll::-webkit-scrollbar-track { background: transparent; }
+        .shop-scroll::-webkit-scrollbar-thumb { background: #7a4a10; border-radius: 2px; }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+            gap: 10px;
+        }
+
+        /* ── Shop card (CoC card style) ── */
+        .shop-card {
+            cursor: pointer;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #5a3810;
+            background: linear-gradient(180deg, #3e2410 0%, #221208 100%);
+            display: flex; flex-direction: column;
+            transition: transform 0.12s, border-color 0.12s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,200,80,0.07);
+        }
+        .shop-card:hover { transform: scale(1.04); border-color: #d08020; }
+        .shop-card:active { transform: scale(0.96); }
+        .shop-card.locked { opacity: 0.72; }
+        .shop-card.locked:hover { transform: none; border-color: #5a3810; }
+        .shop-card.cant-afford { opacity: 0.85; }
+
+        /* Top image area — green background like real CoC cards */
+        .card-img-wrap {
+            background: linear-gradient(180deg, #2a4a14 0%, #1a3008 100%);
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px 8px 8px;
+            min-height: 86px;
+            position: relative;
+        }
+        .card-img-wrap img {
+            width: 66px; height: 66px;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.7));
+        }
+
+        /* TH lock ribbon in top-right of image */
+        .card-th-badge {
+            position: absolute; top: 4px; right: 4px;
+            background: rgba(0,0,0,0.72);
+            border: 1px solid #888;
+            border-radius: 6px;
+            padding: 1px 5px;
+            font-size: 9px; color: #ddd;
+            white-space: nowrap;
+            display: none;
+        }
+        .shop-card.locked .card-th-badge { display: block; }
+
+        /* MAX badge */
+        .card-max-badge {
+            position: absolute; top: 4px; left: 4px;
+            background: rgba(180,0,0,0.8);
+            border: 1px solid #ff6060;
+            border-radius: 6px;
+            padding: 1px 5px;
+            font-size: 9px; color: #fff;
+            display: none;
+        }
+        .shop-card.maxed .card-max-badge { display: block; }
+
+        .card-name {
+            padding: 5px 6px 3px;
+            text-align: center;
+            font-size: 10px; color: #ffe099;
+            text-shadow: 0 1px 3px #000;
+            line-height: 1.2;
+        }
+
+        /* Cost badge */
+        .card-cost {
+            margin: 0 6px 8px;
+            border-radius: 20px;
+            padding: 3px 8px;
+            display: flex; align-items: center; justify-content: center; gap: 4px;
+            font-size: 12px; white-space: nowrap;
+        }
+        .card-cost img { width: 14px; height: 14px; flex-shrink: 0; }
+        .card-cost.gold-cost   { background: linear-gradient(90deg,#7a5400,#c08800); color:#fff8b0; }
+        .card-cost.elixir-cost { background: linear-gradient(90deg,#4a007a,#8a00c8); color:#f0c0ff; }
+        .card-cost.locked-cost { background: rgba(60,60,60,0.6); color:#aaa; }
+        .card-cost.noafford    { background: rgba(140,20,20,0.7); color:#ffaaaa; }
+
+        /* ── INTRO ── */
+        #intro-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: #000; z-index: 9999; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+        }
+        #intro-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.8s ease-out; }
+        .intro-img { position: absolute; width: 100%; height: 100%; object-fit: contain; display: none; }
+        .intro-img.active { display: block; }
+        #click-prompt {
+            color: #fff; position: absolute; bottom: 20%;
+            font-size: 22px; letter-spacing: 2px;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    </style>
+</head>
+<body>
+
+<!-- RESOURCE BAR -->
+<div id="resource-bar">
+    <div class="res-item">
+        <span id="gold-val">750</span>
+        <img class="res-icon" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/coin.png?raw=true" alt="Gold">
+    </div>
+    <div class="res-item">
+        <span id="elixir-val">750</span>
+        <img class="res-icon" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/elixir.png?raw=true" alt="Elixir">
+    </div>
+</div>
+
+<!-- INTRO -->
+<div id="intro-overlay" onclick="startIntro()">
+    <p id="click-prompt">CLICK TO START</p>
+    <img id="intro-0" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro.png?raw=true" class="intro-img active" alt="">
+    <img id="intro-1" src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/intro/intro1.png?raw=true" class="intro-img" alt="">
+</div>
+
+<audio id="intro-audio" preload="auto">
+    <source src="https://raw.githubusercontent.com/jeremyryanknight2012/Clash-of-Clans/main/audio/coc-intro.mp3" type="audio/mpeg">
+</audio>
+<audio id="bg-music" loop></audio>
+
+<!-- GAME WORLD -->
+<div id="game-viewport">
+    <div id="world-surface">
+        <div id="map-container">
+            <div id="grid-layer"></div>
+        </div>
+        <!-- Buildings inside world-surface so they scale with zoom -->
+        <div id="building-layer"></div>
+    </div>
+</div>
+
+<!-- PLACEMENT HINT -->
+<div id="placement-cursor">📍 Click a tile to place — ESC to cancel</div>
+
+<!-- SHOP BUTTON -->
+<div class="bottom-right-ui">
+    <img src="https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buttons/shop.png?raw=true"
+         class="shop-btn" id="shop-trigger" alt="Shop">
+</div>
+
+<!-- SHOP OVERLAY -->
+<div id="shop-layer">
+    <div class="shop-panel" id="shop-panel">
+        <div class="shop-topbar">
+            <button class="shop-close-x" id="close-shop">✕</button>
+        </div>
+        <div class="shop-cats" id="shop-cats"></div>
+        <div class="shop-scroll">
+            <div class="shop-grid" id="shop-items-container"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDtAQZBz45bfocaqj08uUXLfPL9vFScstc",
+    authDomain: "clash-of-clans-4c664.firebaseapp.com",
+    databaseURL: "https://clash-of-clans-4c664-default-rtdb.firebaseio.com",
+    projectId: "clash-of-clans-4c664",
+    storageBucket: "clash-of-clans-4c664.firebasestorage.app",
+    messagingSenderId: "417308170977",
+    appId: "1:417308170977:web:ef0cd85423f830f4ecb5a0"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ── STATE ──────────────────────────────────────────────────────
+let resources      = { gold: 750, elixir: 750 };
+let buildingsData  = [];
+let selectedBuilding = null;
+let dragActive     = false;
+let townHallLevel  = 1;   // determines what's unlocked
+
+// ── SHOP ITEM DEFINITIONS ──────────────────────────────────────
+/*
+  thRequired : minimum TH level to see/buy
+  maxCount   : max instances allowed on the map (null = unlimited)
+*/
+const shopItems = [
+    { id:'gold_mine',        name:'Gold Mine',        size:'size-2x2', cat:'resources', cost:150,  currency:'gold',   thRequired:1, maxCount:null },
+    { id:'elixir_collector', name:'Elixir Collector', size:'size-2x2', cat:'resources', cost:150,  currency:'elixir', thRequired:1, maxCount:null },
+    { id:'gold_storage',     name:'Gold Storage',     size:'size-3x3', cat:'resources', cost:300,  currency:'gold',   thRequired:1, maxCount:null },
+    { id:'elixir_storage',   name:'Elixir Storage',   size:'size-3x3', cat:'resources', cost:300,  currency:'elixir', thRequired:1, maxCount:null },
+    { id:'cannon',           name:'Cannon',           size:'size-2x2', cat:'defense',   cost:250,  currency:'gold',   thRequired:1, maxCount:null },
+    { id:'archer_tower',     name:'Archer Tower',     size:'size-2x2', cat:'defense',   cost:400,  currency:'gold',   thRequired:2, maxCount:null },
+    { id:'walls',            name:'Walls',            size:'size-1x1', cat:'defense',   cost:50,   currency:'gold',   thRequired:1, maxCount:null },
+    { id:'barracks',         name:'Barracks',         size:'size-2x2', cat:'army',      cost:200,  currency:'elixir', thRequired:1, maxCount:null },
+    { id:'army_camp',        name:'Army Camp',        size:'size-4x4', cat:'army',      cost:500,  currency:'elixir', thRequired:1, maxCount:1    },
+];
+
+const CATS = [
+    { id:'all',       label:'All'       },
+    { id:'resources', label:'Resources' },
+    { id:'defense',   label:'Defense'   },
+    { id:'army',      label:'Army'      },
+];
+
+function getSizeClass(type) {
+    if (type === 'townhall1') return 'size-4x4';
+    return (shopItems.find(s => s.id === type) || {}).size || 'size-2x2';
+}
+
+function countPlaced(type) {
+    return buildingsData.filter(b => b.type === type).length;
+}
+
+// Shop card state helpers
+function isUnlocked(item)  { return townHallLevel >= item.thRequired; }
+function isMaxed(item)     { return item.maxCount !== null && countPlaced(item.id) >= item.maxCount; }
+function canPlace(item)    { return isUnlocked(item) && !isMaxed(item); }
+function canAfford(item)   { return resources[item.currency] >= item.cost; }
+
+// ── GRID ──────────────────────────────────────────────────────
+const grassUrls = [
+    'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass.png?raw=true',
+    'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass1.png?raw=true',
+    'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass2.png?raw=true',
+    'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass3.png?raw=true',
+    'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/grid/grass4.png?raw=true',
+];
+
+function setupGrid() {
+    const gl = document.getElementById('grid-layer');
+    for (let i = 0; i < 1600; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.id = `tile-${i}`;
+        tile.style.backgroundImage = `url('${grassUrls[Math.floor(Math.random()*grassUrls.length)]}')`;
+        tile.addEventListener('click', e => {
+            e.stopPropagation();
+            if (dragActive) return;
+            if (selectedBuilding) { placeBuilding(i, selectedBuilding); return; }
+            collectResources(i);
+        });
+        gl.appendChild(tile);
+    }
+}
+
+// ── SHOP ─────────────────────────────────────────────────────
+let activeCategory = 'all';
+
+function buildCatBar() {
+    const bar = document.getElementById('shop-cats');
+    bar.innerHTML = '';
+    CATS.forEach(c => {
+        const btn = document.createElement('div');
+        btn.className = 'shop-cat' + (c.id === activeCategory ? ' active' : '');
+        btn.textContent = c.label;
+        btn.addEventListener('click', () => {
+            activeCategory = c.id;
+            document.querySelectorAll('.shop-cat').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            populateShop();
+        });
+        bar.appendChild(btn);
+    });
+}
+
+function populateShop() {
+    const container = document.getElementById('shop-items-container');
+    container.innerHTML = '';
+
+    const list = activeCategory === 'all' ? shopItems : shopItems.filter(i => i.cat === activeCategory);
+
+    list.forEach(item => {
+        const unlocked  = isUnlocked(item);
+        const maxed     = isMaxed(item);
+        const placeable = canPlace(item);
+        const affordable = canAfford(item);
+
+        /*
+         * Shop card image logic:
+         *   unlocked + can still place → shop/{id}.png
+         *   locked (TH req) or maxed   → shop/no_{id}.png
+         */
+        const cardImg = (unlocked && !maxed)
+            ? `https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/${item.id}.png?raw=true`
+            : `https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/shop/no_${item.id}.png?raw=true`;
+
+        const coinSrc = item.currency === 'gold'
+            ? 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/coin.png?raw=true'
+            : 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/elixir.png?raw=true';
+
+        // Cost badge style
+        let costClass = item.currency === 'gold' ? 'gold-cost' : 'elixir-cost';
+        let costHTML  = `<img src="${coinSrc}" alt="">${item.cost.toLocaleString()}`;
+        if (!unlocked) {
+            costClass = 'locked-cost';
+            costHTML  = `🔒 TH${item.thRequired}`;
+        } else if (maxed) {
+            costClass = 'locked-cost';
+            costHTML  = 'MAX';
+        } else if (!affordable) {
+            costClass = 'noafford';
+            costHTML  = `<img src="${coinSrc}" alt="">${item.cost.toLocaleString()}`;
+        }
+
+        const thBadge  = !unlocked ? `TH${item.thRequired}` : '';
+        const maxBadge = maxed ? 'MAX' : '';
+
+        const card = document.createElement('div');
+        card.className = 'shop-card'
+            + (!unlocked || maxed ? ' locked' : '')
+            + (maxed ? ' maxed' : '')
+            + (!placeable && unlocked && !maxed ? ' cant-afford' : '');
+
+        card.innerHTML = `
+            <div class="card-img-wrap">
+                <img src="${cardImg}" alt="${item.name}">
+                <div class="card-th-badge">${thBadge}</div>
+                <div class="card-max-badge">${maxBadge}</div>
+            </div>
+            <div class="card-name">${item.name}</div>
+            <div class="card-cost ${costClass}">${costHTML}</div>
+        `;
+
+        card.addEventListener('click', () => {
+            if (!placeable || !affordable) {
+                card.style.borderColor = '#ff3333';
+                setTimeout(() => card.style.borderColor = '', 500);
+                return;
+            }
+            selectedBuilding = item.id;
+            document.getElementById('shop-layer').classList.remove('open');
+            document.getElementById('placement-cursor').style.display = 'block';
+            document.querySelectorAll('.tile').forEach(t => t.classList.add('placing-mode'));
+        });
+
+        container.appendChild(card);
+    });
+}
+
+// ── CAMERA STATE ──────────────────────────────────────────────
+const world    = document.getElementById('world-surface');
+const viewport = document.getElementById('game-viewport');
+
+let currentX   = (window.innerWidth  / 2) - 2500;
+let currentY   = (window.innerHeight / 2) - 2500;
+const MIN_ZOOM = 0.3;
+const MAX_ZOOM = 2.0;
+let currentZoom = 1.0;
+
+// Pan momentum
+let velX = 0, velY = 0;
+const FRICTION  = 0.88;
+const MIN_VEL   = 0.3;
+let momentumRAF = null;
+
+// Zoom momentum
+let zoomVel      = 0;
+const Z_FRICTION = 0.80;
+const MIN_ZVEL   = 0.0003;
+let zoomRAF      = null;
+
+function applyWorldTransform() {
+    world.style.left      = currentX + 'px';
+    world.style.top       = currentY + 'px';
+    world.style.transform = `scale(${currentZoom})`;
+}
+applyWorldTransform();
+
+// ── PAN + MOMENTUM ────────────────────────────────────────────
+let isPanning = false;
+let panStartX, panStartY, lastMX, lastMY, lastMTime;
+let sampleVX = 0, sampleVY = 0;
+
+function stopMomentum() {
+    if (momentumRAF) { cancelAnimationFrame(momentumRAF); momentumRAF = null; }
+    velX = 0; velY = 0;
+}
+function runMomentum() {
+    velX *= FRICTION; velY *= FRICTION;
+    if (Math.abs(velX) < MIN_VEL && Math.abs(velY) < MIN_VEL) { momentumRAF = null; return; }
+    currentX += velX; currentY += velY;
+    applyWorldTransform();
+    momentumRAF = requestAnimationFrame(runMomentum);
+}
+
+viewport.addEventListener('mousedown', e => {
+    if (e.target.closest('#shop-trigger') || e.target.closest('#shop-layer')) return;
+    isPanning = true; dragActive = false;
+    stopMomentum();
+    panStartX = e.clientX - currentX;
+    panStartY = e.clientY - currentY;
+    lastMX = e.clientX; lastMY = e.clientY; lastMTime = performance.now();
+    sampleVX = 0; sampleVY = 0;
+    viewport.classList.add('grabbing');
+});
+
+window.addEventListener('mousemove', e => {
+    if (!isPanning) return;
+    const dx = Math.abs(e.clientX - (panStartX + currentX));
+    const dy = Math.abs(e.clientY - (panStartY + currentY));
+    if (dx > 4 || dy > 4) dragActive = true;
+    const now = performance.now(), dt = now - lastMTime;
+    if (dt > 0) {
+        sampleVX = sampleVX * 0.6 + ((e.clientX - lastMX) / dt * 16) * 0.4;
+        sampleVY = sampleVY * 0.6 + ((e.clientY - lastMY) / dt * 16) * 0.4;
+    }
+    lastMX = e.clientX; lastMY = e.clientY; lastMTime = now;
+    currentX = e.clientX - panStartX;
+    currentY = e.clientY - panStartY;
+    applyWorldTransform();
+});
+
+window.addEventListener('mouseup', () => {
+    if (!isPanning) return;
+    isPanning = false;
+    viewport.classList.remove('grabbing');
+    velX = sampleVX; velY = sampleVY;
+    if (Math.abs(velX) > MIN_VEL || Math.abs(velY) > MIN_VEL)
+        momentumRAF = requestAnimationFrame(runMomentum);
+    setTimeout(() => { dragActive = false; }, 10);
+});
+
+// ── TOUCH PAN + PINCH ZOOM ────────────────────────────────────
+let touchPanSX, touchPanSY, lastTX, lastTY, lastTTime;
+let sampleTVX = 0, sampleTVY = 0;
+let lastPinchDist = null;
+
+function getTouchDist(t) {
+    const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+}
+function getTouchMid(t) {
+    return { x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2 };
+}
+
+viewport.addEventListener('touchstart', e => {
+    stopMomentum();
+    if (e.touches.length === 1) {
+        isPanning = true; dragActive = false;
+        touchPanSX = e.touches[0].clientX - currentX;
+        touchPanSY = e.touches[0].clientY - currentY;
+        lastTX = e.touches[0].clientX; lastTY = e.touches[0].clientY;
+        lastTTime = performance.now(); sampleTVX = 0; sampleTVY = 0;
+        lastPinchDist = null;
+    } else if (e.touches.length === 2) {
+        isPanning = false; lastPinchDist = getTouchDist(e.touches);
+    }
+}, { passive:true });
+
+viewport.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+        const d = getTouchDist(e.touches);
+        if (lastPinchDist !== null) zoomAround(currentZoom * d / lastPinchDist, getTouchMid(e.touches));
+        lastPinchDist = d; return;
+    }
+    if (!isPanning || e.touches.length !== 1) return;
+    dragActive = true;
+    const now = performance.now(), dt = now - lastTTime;
+    if (dt > 0) {
+        sampleTVX = sampleTVX * 0.6 + ((e.touches[0].clientX - lastTX)/dt*16)*0.4;
+        sampleTVY = sampleTVY * 0.6 + ((e.touches[0].clientY - lastTY)/dt*16)*0.4;
+    }
+    lastTX = e.touches[0].clientX; lastTY = e.touches[0].clientY; lastTTime = now;
+    currentX = e.touches[0].clientX - touchPanSX;
+    currentY = e.touches[0].clientY - touchPanSY;
+    applyWorldTransform();
+}, { passive:true });
+
+viewport.addEventListener('touchend', e => {
+    if (e.touches.length === 0) {
+        lastPinchDist = null;
+        if (isPanning) {
+            isPanning = false;
+            velX = sampleTVX; velY = sampleTVY;
+            if (Math.abs(velX) > MIN_VEL || Math.abs(velY) > MIN_VEL)
+                momentumRAF = requestAnimationFrame(runMomentum);
+        }
+        setTimeout(() => { dragActive = false; }, 10);
+    } else if (e.touches.length === 1) {
+        lastPinchDist = null; isPanning = true;
+        touchPanSX = e.touches[0].clientX - currentX;
+        touchPanSY = e.touches[0].clientY - currentY;
+        lastTX = e.touches[0].clientX; lastTY = e.touches[0].clientY;
+        lastTTime = performance.now(); sampleTVX = 0; sampleTVY = 0;
+    }
+});
+
+// ── ZOOM ──────────────────────────────────────────────────────
+function zoomAround(newZoom, focal) {
+    newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+    if (newZoom === currentZoom) return;
+    const ratio = newZoom / currentZoom;
+    currentX = focal.x - ratio * (focal.x - currentX);
+    currentY = focal.y - ratio * (focal.y - currentY);
+    currentZoom = newZoom;
+    applyWorldTransform();
+}
+
+function stopZoomMom() {
+    if (zoomRAF) { cancelAnimationFrame(zoomRAF); zoomRAF = null; } zoomVel = 0;
+}
+function runZoomMom(fx, fy) {
+    zoomVel *= Z_FRICTION;
+    if (Math.abs(zoomVel) < MIN_ZVEL) { zoomRAF = null; return; }
+    zoomAround(currentZoom + zoomVel, { x:fx, y:fy });
+    zoomRAF = requestAnimationFrame(() => runZoomMom(fx, fy));
+}
+
+// Scroll wheel zoom — NO buttons
+viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    stopZoomMom();
+    const delta = -e.deltaY * 0.001 * currentZoom;
+    zoomAround(currentZoom + delta, { x:e.clientX, y:e.clientY });
+    zoomVel = delta * 0.3;
+    const fx = e.clientX, fy = e.clientY;
+    zoomRAF = requestAnimationFrame(() => runZoomMom(fx, fy));
+}, { passive: false });
+
+// ── BUILDING PLACEMENT ────────────────────────────────────────
+/*
+ * Buildings now live inside #world-surface (scaled+translated).
+ * We convert tile screen-space centre → world-surface local coords.
+ *
+ *   screen = worldLocal * zoom + pan
+ *   worldLocal = (screen - pan) / zoom
+ */
+function tileToWorldPos(tile) {
+    const r  = tile.getBoundingClientRect();
+    const sx = r.left + r.width  / 2;
+    const sy = r.top  + r.height / 2;
+    return { x: (sx - currentX) / currentZoom, y: (sy - currentY) / currentZoom };
+}
+
+function placeBuilding(tileId, type, shouldSave = true) {
+    const tile = document.getElementById(`tile-${tileId}`);
+    if (!tile) return;
+
+    if (document.querySelector(`.building-wrapper[data-tile="${tileId}"]`)) {
+        const wp = tileToWorldPos(tile);
+        showWorldMsg(wp.x, wp.y, '❌ Occupied!');
+        return;
+    }
+
+    const sizeClass = getSizeClass(type);
+    const wrapper   = document.createElement('div');
+    wrapper.className   = `building-wrapper ${sizeClass}`;
+    wrapper.dataset.tile = tileId;
+
+    // Collect bubble
+    const bubble = document.createElement('div');
+    bubble.className = 'collect-bubble';
+    if (type === 'gold_mine' || type === 'elixir_collector') {
+        const icon = document.createElement('img');
+        icon.src = type === 'gold_mine'
+            ? 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/coin.png?raw=true'
+            : 'https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/currency/elixir.png?raw=true';
+        bubble.appendChild(icon);
+    }
+
+    // Building image → /buildings/ folder
+    const img       = document.createElement('img');
+    img.className   = 'building-canvas';
+    img.src         = `https://github.com/jeremyryanknight2012/Clash-of-Clans/blob/main/buildings/${type}.png?raw=true`;
+    img.alt         = type;
+
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(img);
+
+    const wp = tileToWorldPos(tile);
+    wrapper.style.left = wp.x + 'px';
+    wrapper.style.top  = wp.y + 'px';
+
+    document.getElementById('building-layer').appendChild(wrapper);
+
+    wrapper.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!dragActive) collectResources(tileId);
+    });
+
+    // Bounce-in
+    wrapper.style.opacity   = '0';
+    wrapper.style.transform = 'translate(-50%,-100%) scale(0.5)';
+    requestAnimationFrame(() => {
+        wrapper.style.transition = 'opacity 0.25s, transform 0.25s';
+        wrapper.style.opacity    = '1';
+        wrapper.style.transform  = 'translate(-50%,-100%) scale(1)';
+    });
+
+    if (shouldSave) {
+        const item = shopItems.find(s => s.id === type);
+        if (item) { resources[item.currency] -= item.cost; updateUI(); }
+        buildingsData.push({ tileId, type, stored: 0 });
+        saveGame();
+    }
+
+    cancelPlacement();
+}
+
+function cancelPlacement() {
+    selectedBuilding = null;
+    document.getElementById('placement-cursor').style.display = 'none';
+    document.querySelectorAll('.tile').forEach(t => t.classList.remove('placing-mode'));
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cancelPlacement(); });
+
+// ── RESOURCE COLLECTION ───────────────────────────────────────
+function collectResources(tileId) {
+    const b = buildingsData.find(i => i.tileId === tileId);
+    if (!b || !b.stored) return;
+    if (b.type === 'gold_mine')        resources.gold   += b.stored;
+    if (b.type === 'elixir_collector') resources.elixir += b.stored;
+
+    const w = document.querySelector(`.building-wrapper[data-tile="${tileId}"]`);
+    if (w) {
+        const msg = document.createElement('div');
+        msg.textContent = `+${b.stored} ${b.type === 'gold_mine' ? '🪙' : '🔮'}`;
+        msg.style.cssText = `position:absolute;left:50%;bottom:100%;transform:translateX(-50%);color:#fff;font-size:16px;font-family:'Luckiest Guy',cursive;text-shadow:2px 2px #000;pointer-events:none;z-index:999;white-space:nowrap;animation:floatUp 1s forwards;`;
+        w.appendChild(msg);
+        setTimeout(() => msg.remove(), 1000);
+    }
+
+    b.stored = 0;
+    updateUI(); updateBubbles(); saveGame();
+}
+
+function showWorldMsg(wx, wy, text) {
+    const msg = document.createElement('div');
+    msg.textContent = text;
+    msg.style.cssText = `position:absolute;left:${wx}px;top:${wy}px;transform:translate(-50%,-100%);color:#fff;font-size:15px;font-family:'Luckiest Guy',cursive;text-shadow:2px 2px #000;pointer-events:none;z-index:999;white-space:nowrap;animation:floatUp 1s forwards;`;
+    document.getElementById('building-layer').appendChild(msg);
+    setTimeout(() => msg.remove(), 1000);
+}
+
+// Float-up keyframe
+const _s = document.createElement('style');
+_s.textContent = `@keyframes floatUp{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-40px)}}`;
+document.head.appendChild(_s);
+
+// ── RESOURCE TICK ─────────────────────────────────────────────
+setInterval(() => {
+    buildingsData.forEach(b => {
+        if (b.type === 'gold_mine' || b.type === 'elixir_collector')
+            b.stored = (b.stored || 0) + 1;
+    });
+    updateBubbles();
+}, 3000);
+
+function updateBubbles() {
+    buildingsData.forEach(b => {
+        const w = document.querySelector(`.building-wrapper[data-tile="${b.tileId}"]`);
+        if (!w) return;
+        const bub = w.querySelector('.collect-bubble');
+        if (!bub) return;
+        if (b.type === 'gold_mine' || b.type === 'elixir_collector')
+            bub.classList.toggle('visible', b.stored > 0);
+    });
+}
+
+function updateUI() {
+    document.getElementById('gold-val').textContent   = resources.gold;
+    document.getElementById('elixir-val').textContent = resources.elixir;
+}
+
+// ── FIREBASE ──────────────────────────────────────────────────
+function saveGame() {
+    set(ref(db, 'users/player1'), { resources, buildings: buildingsData, townHallLevel });
+}
+function loadGame() {
+    onValue(ref(db, 'users/player1'), snap => {
+        const d = snap.val();
+        if (d) {
+            resources     = d.resources    || resources;
+            townHallLevel = d.townHallLevel || 1;
+            updateUI();
+            if (d.buildings) {
+                buildingsData = d.buildings;
+                buildingsData.forEach(b => placeBuilding(b.tileId, b.type, false));
+            }
+        } else {
+            placeBuilding(820, 'townhall1', true);
+        }
+    }, { onlyOnce: true });
+}
+
+// ── SHOP UI ───────────────────────────────────────────────────
+document.getElementById('shop-trigger').addEventListener('click', () => {
+    cancelPlacement();
+    buildCatBar();
+    populateShop();
+    document.getElementById('shop-layer').classList.add('open');
+});
+document.getElementById('close-shop').addEventListener('click', () => {
+    document.getElementById('shop-layer').classList.remove('open');
+});
+document.getElementById('shop-layer').addEventListener('click', e => {
+    if (e.target === document.getElementById('shop-layer'))
+        document.getElementById('shop-layer').classList.remove('open');
+});
+document.getElementById('shop-panel').addEventListener('click', e => e.stopPropagation());
+
+// ── INTRO ─────────────────────────────────────────────────────
+window.startIntro = () => {
+    document.getElementById('click-prompt').style.display = 'none';
+    document.getElementById('intro-audio').play().catch(() => {});
+    setTimeout(() => {
+        document.getElementById('intro-0').classList.remove('active');
+        document.getElementById('intro-1').classList.add('active');
+        setTimeout(() => {
+            document.getElementById('intro-overlay').classList.add('hidden');
+            const bg = document.getElementById('bg-music');
+            bg.src = "https://nu.vgmtreasurechest.com/soundtracks/clash-of-clans-soundtrack/zdwyzfcv/04.%20Home%20Music%20Part%201.mp3";
+            bg.play().catch(() => {});
+        }, 2500);
+    }, 2500);
+};
+
+// ── BOOT ──────────────────────────────────────────────────────
+setupGrid();
+loadGame();
+</script>
+</body>
+</html>
